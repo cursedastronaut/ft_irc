@@ -1,0 +1,37 @@
+name: Channel unit tests
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  channels:
+    name: C++98 (${{ matrix.os }}, ${{ matrix.cxx }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cxx: g++
+          - os: ubuntu-latest
+            cxx: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run focused channel tests
+        run: python3 tests/channels/run.py
+        env:
+          CXX: ${{ matrix.cxx }}
+
+  sanitizers:
+    name: Address and undefined behavior sanitizers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check memory and undefined behavior
+        run: python3 tests/channels/run.py --sanitizers
+        env:
+          CXX: clang++
