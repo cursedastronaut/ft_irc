@@ -93,6 +93,33 @@ References for review (the subject remains authoritative):
 The stricter control/delimiter rejection and supported prefix subset above
 are proposed project decisions requiring all three owners' approval.
 
+## Registry operations (CHAN-03)
+
+`ChannelRegistry` owns a `map<string, Channel>` by canonical key. It is
+noncopyable and never uses map indexing for lookup. Every operation first
+uses the same channel-name validation and shared mapping:
+
+| Operation | Result | Mutation |
+| --- | --- | --- |
+| `find(name)` (mutable/const overloads) | Pointer to channel; null if absent/invalid | None; never inserts |
+| `create(name)` | `(pointer, true)` when inserted; `(existing, false)` for an alias; `(null, false)` if invalid | One insertion at most; existing state and first display spelling stay intact |
+| `eraseEmpty(name)` | True only when removed; false if absent/invalid/nonempty | Erases the entire channel value only when its member set is empty |
+| `size()` | Current channel count | None |
+
+Pointers remain valid across insertions and erasure of **other** channels;
+erasing that channel or destroying its registry invalidates them. Callers
+must not retain pointers across those lifetimes. Allocation failures
+propagate without a partial insertion; runtime failure containment belongs
+to the future server layer. Erasing a value destroys all its owned
+topic/modes/invitation state, so recreation receives fresh defaults.
+Invitations do not keep an otherwise empty channel alive. Checking
+membership for erasure does not implement JOIN/PART or CHAN-04 operations.
+
+Future CORE-03 service APIs (`handle`, `removeClient`, `peersOf`) and
+identity lookup are intentionally not stubbed or implemented here. There
+are no consumers on this base to update and no implementation of protocol,
+commands, socket handling or an `ircserv` executable in this patch.
+
 ## Verification
 
 Run `python3 tests/channels/run.py --suite model` from the repository root.

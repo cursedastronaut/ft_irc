@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
     "model": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
     "names": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
+    "registry": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",
+                 "src/channels/ChannelRegistry.cpp"],
 }
 
 
@@ -21,7 +23,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=sorted(SUITES))
     parser.add_argument("--sanitizers", action="store_true")
+    parser.add_argument("--no-leak-check", action="store_true",
+                        help="disable LeakSanitizer only in restricted local environments")
     args = parser.parse_args()
+    if args.no_leak_check and not args.sanitizers:
+        parser.error("--no-leak-check requires --sanitizers")
     compiler = shlex.split(os.environ.get("CXX", "c++"))
     flags = shlex.split(os.environ.get("CXXFLAGS", ""))
     flags += ["-std=c++98", "-Wall", "-Wextra", "-Werror", "-pedantic-errors"]
@@ -29,7 +35,8 @@ def main():
     environment = os.environ.copy()
     if args.sanitizers:
         flags += ["-g", "-O1", "-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
-        environment["ASAN_OPTIONS"] = "detect_leaks=1:halt_on_error=1"
+        leak_check = "0" if args.no_leak_check else "1"
+        environment["ASAN_OPTIONS"] = "detect_leaks=" + leak_check + ":halt_on_error=1"
         environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
     suites = [args.suite] if args.suite else sorted(SUITES)
     try:
