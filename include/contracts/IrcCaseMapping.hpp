@@ -9,22 +9,22 @@ namespace irc
 // RFC1459 equivalences, independent of locale and signed-char behavior.
 inline std::string canonicalizeIrcName(const std::string &name)
 {
-    std::string result(name);
-    for (std::string::size_type i = 0; i < result.size(); ++i)
-    {
-        const unsigned char byte = static_cast<unsigned char>(result[i]);
-        if (byte >= 'A' && byte <= 'Z')
-            result[i] = static_cast<char>(byte + ('a' - 'A'));
-        else if (byte == '[')
-            result[i] = '{';
-        else if (byte == ']')
-            result[i] = '}';
-        else if (byte == '\\')
-            result[i] = '|';
-        else if (byte == '^')
-            result[i] = '~';
-    }
-    return result;
+	std::string result(name);
+	for (std::string::size_type i = 0; i < result.size(); ++i)
+	{
+		const unsigned char byte = static_cast<unsigned char>(result[i]);
+		if (byte >= 'A' && byte <= 'Z')
+			result[i] = static_cast<char>(byte + ('a' - 'A'));
+		else if (byte == '[')
+			result[i] = '{';
+		else if (byte == ']')
+			result[i] = '}';
+		else if (byte == '\\')
+			result[i] = '|';
+		else if (byte == '^')
+			result[i] = '~';
+	}
+	return result;
 }
 }
 
