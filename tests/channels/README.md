@@ -37,8 +37,7 @@ returns nonzero. Fixtures use stable IDs rather than socket numbers. This
 is focused unit verification, not proof of live reference-client compatibility.
 See `docs/team-contract.md` for the prerequisite approval gate.
 
-GitHub Actions runs this same runner with GCC and Clang on Linux, Clang on
-macOS and a Linux Clang AddressSanitizer/UndefinedBehaviorSanitizer job.
+GitHub Actions runs this same runner with GCC and Clang on Linux, and a Linux Clang AddressSanitizer/UndefinedBehaviorSanitizer job.
 Hosted CI runs only after these commits are pushed or a PR is opened.
 
 In a traced/sandboxed local environment where LeakSanitizer cannot inspect
