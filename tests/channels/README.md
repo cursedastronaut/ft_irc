@@ -4,6 +4,7 @@ Run from the repository root:
 
 ```sh
 python3 tests/channels/run.py --suite model
+python3 tests/channels/run.py --suite names
 python3 tests/channels/run.py
 python3 tests/channels/run.py --sanitizers
 CXX=clang++ python3 tests/channels/run.py
@@ -23,6 +24,7 @@ files are killed/deleted.
 | Suite | Normal case | Failure/negative case |
 | --- | --- | --- |
 | `model` / CHAN-01 (#9) | Empty channel and independent copied state | A reused nickname on a different stable ID does not inherit membership/operator/invitation state |
+| `names` / CHAN-02 (#20) | Equivalent case/special spellings and retained display spelling; exact 50-byte boundary | Empty/prefix-only/bad-prefix names, embedded NUL, delimiters, controls and overlong names are rejected without overwriting an output key |
 
 Checks remain active with `-DNDEBUG` and a failure prints its file/line and
 returns nonzero. Fixtures use stable IDs rather than socket numbers. This

@@ -26,8 +26,8 @@ recorded before integrating callers.
 | Person 2 | `src/protocol`, `src/commands/auth` | Person 3 |
 | Person 3 | `src/channels`, `src/commands/channel` | Person 1 |
 
-All three approve `include/contracts`. This branch adds only a minimal
-proposed identity header there; it does not implement transport/protocol
+All three approve `include/contracts`. This branch adds minimal proposed
+identity and shared casemapping headers there; it does not implement transport/protocol
 interfaces or rename any frozen API. Tests are isolated in `tests/channels`;
 the only CI addition is `.github/workflows/channels.yml`. The existing
 templates and root README are untouched. The requested three-task archive
@@ -62,6 +62,36 @@ handlers must queue replies through transport rather than perform I/O.
 Transport remains responsible for one readiness loop, nonblocking sockets
 and return-value-only recv/send handling, never inspecting errno afterward.
 This branch adds no transport implementation or syscall policy exception.
+
+## Name policy proposal (CHAN-02 / PROTO-01)
+
+- Support ordinary `#` and local `&` channels for the mandatory project.
+  A name is 2..50 **bytes**, including its prefix. Prefix-only names are
+  invalid. `+`/`!` channel types and server-mask suffixes are outside this
+  mandatory subset; this is an explicit project proposal, not a claim that
+  the subject fixes the length or that the full RFC grammar is implemented.
+- Reject ASCII bytes 0..32 (including NUL, BEL, tab, CR, LF and space), DEL,
+  comma and colon. Other bytes, including bytes >=128, are preserved.
+  No trimming, truncation, Unicode folding or locale-dependent conversion.
+- `irc::canonicalizeIrcName` is the **one shared helper** proposed for both
+  nickname and channel lookup: ASCII A-Z map to a-z, `[` to `{`, `]` to `}`,
+  backslash to `|` and `^` to `~`. Equivalences follow RFC1459-style mapping.
+  The choice of lower representative is deterministic and idempotent.
+  A future parser/nickname implementation must reuse this helper rather
+  than introduce an independent lowercase policy.
+- `isValidChannelName(name)` performs validation without mutating state.
+  `canonicalizeChannelName(name, key)` returns false without changing `key`
+  on invalid input. On success it writes the canonical key, including when
+  input/output alias. Allocation failures propagate to the caller.
+- `Channel(name)` validates before construction completes, throws
+  `std::invalid_argument` on malformed input and stores both canonical key
+  and original display spelling. No invalid channel can enter the registry.
+
+References for review (the subject remains authoritative):
+[RFC 1459 section 2.2](https://www.rfc-editor.org/rfc/rfc1459.html#section-2.2),
+[RFC 2812 sections 1.3 and 2.2](https://www.rfc-editor.org/rfc/rfc2812.html#section-1.3).
+The stricter control/delimiter rejection and supported prefix subset above
+are proposed project decisions requiring all three owners' approval.
 
 ## Verification
 

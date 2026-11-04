@@ -26,7 +26,8 @@ class Channel
 public:
     typedef std::set<ClientId> ClientIds;
 
-    // CHAN-01 callers supply a canonical name; CHAN-02 adds validation.
+    // Validates the name, derives its canonical key and retains its spelling.
+    // Throws std::invalid_argument for malformed names.
     explicit Channel(const std::string &name);
     Channel(const Channel &other);
 

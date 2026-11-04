@@ -1,4 +1,18 @@
 #include "channels/Channel.hpp"
+#include "channels/ChannelName.hpp"
+
+#include <stdexcept>
+
+namespace
+{
+std::string validatedCanonicalName(const std::string &name)
+{
+    std::string canonical;
+    if (!irc::canonicalizeChannelName(name, canonical))
+        throw std::invalid_argument("Invalid channel name");
+    return canonical;
+}
+}
 
 namespace irc
 {
@@ -10,7 +24,7 @@ ChannelModes::ChannelModes()
 
 Channel::Channel(const std::string &name)
     : members(), operators(), invitations(), topic(), modes(),
-      canonicalName_(name), displayName_(name)
+      canonicalName_(validatedCanonicalName(name)), displayName_(name)
 {
 }
 
