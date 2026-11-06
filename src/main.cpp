@@ -1,5 +1,4 @@
-#include <iostream>
-#include <exception>
+#include "irc_core.hpp"
 
 int	main(int ac, char **av) {
 	(void)av;
