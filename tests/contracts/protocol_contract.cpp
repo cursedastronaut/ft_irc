@@ -50,11 +50,11 @@ public:
 	}
 
 	void requestDisconnection(irc::ClientId id, const std::string &reason,
-							   bool isMessageFinished)
+							   bool afterFlush)
 	{
 		(void)id;
 		(void)reason;
-		(void)isMessageFinished;
+		(void)afterFlush;
 	}
 
 	enqueueResult enqueueLine(irc::ClientId id, const std::string &line)
