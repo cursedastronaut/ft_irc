@@ -1,11 +1,19 @@
 NAME		= ircserv
+
+TEST_NET	= net_test
+#TEST_AUTH	= auth_test
+TEST_CHAN	= chan_test
+TEST_ALL	= test
+
 CXX			= c++
 CXXFLAGS	= -O3 -Wall -Wextra -Werror -Iinclude -std=c++98 -MMD -MP
 RM			= rm -rf
 
 OBJ_DIR		= obj/
 SRC_DIR		= src/
-FILES		= main.cpp
+FILES		= main.cpp\
+			net/ServerConfig.cpp\
+			net/parsers.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))
@@ -40,6 +48,19 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 	@echo "[PROGRESS] $<"
 
 -include $(DEPS)
+
+$(TEST_NET):
+	@$(CXX) $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm test_config.d
+	@valgrind --leak-check=full ./test_config
+	@rm test_config
+
+#$(TEST_AUTH):
+
+
+$(TEST_CHAN):
+	@python3 tests/channels/run.py --sanitizers --no-leak-check
+
+$(TEST_ALL): $(TEST_NET) $(TEST_CHAN)
 
 clean:
 	@$(RM) $(OBJ_DIR)
