@@ -1,0 +1,45 @@
+name: NET unit tests
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+env:
+  CXXFLAGS: -O3 -Wall -Wextra -Werror -Iinclude -std=c++98
+jobs:
+  net:
+    name: C++98 (${{ matrix.os }}, ${{ matrix.cxx }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cxx: g++
+          - os: ubuntu-latest
+            cxx: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run focused ServerConfig test
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: |
+          $CXX $CXXFLAGS src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config
+          ./test_config
+          rm -f test_config
+  sanitizers:
+    name: Valgrind & Sanitizers (NET)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - name: Check memory leaks (ServerConfig)
+        env:
+          CXX: clang++
+        run: |
+          $CXX $CXXFLAGS src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config
+          valgrind --leak-check=full --error-exitcode=1 ./test_config
+          rm -f test_config
