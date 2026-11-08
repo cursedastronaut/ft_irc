@@ -57,7 +57,7 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 -include $(DEPS)
 
 $(TEST_NET):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm -f test_config.d
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config && rm -f test_config.d
 	@./test_config
 	@rm -f test_config
 
@@ -70,7 +70,7 @@ $(TEST_CHAN):
 $(TEST_ALL): $(TEST_NET) $(TEST_CHAN)
 
 $(TEST_NET_MEM):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm -f test_config.d
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config && rm -f test_config.d
 	@valgrind --leak-check=full --error-exitcode=1 ./test_config 
 	@rm -f test_config
 
