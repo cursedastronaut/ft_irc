@@ -2,43 +2,23 @@
 
 //	Exception
 const char *ParserPortEmptyPort::what() const throw() {
-	static std::string err;
-
-	std::ostringstream oss;
-	oss << "Error: Port empty: must be filled with value between "
-		<< MIN_PORT << " and " << MAX_PORT;
-	err = oss.str();
-	return (err.c_str());
+	return ("Error: Port empty: must be filled with value between "
+			TOSTRING(MIN_PORT) " and " TOSTRING(MAX_PORT));
 }
 
 const char	*ParserPortIvalideFormat::what() const throw() {
-	static std::string err;
-
-	std::ostringstream oss;
-	oss << "Error: Port invalide format: must be filled with value between "
-		<< MIN_PORT << " and " << MAX_PORT;
-	err = oss.str();
-	return (err.c_str());
+	return ("Error: Port invalide format: must be filled with value between "
+			TOSTRING(MIN_PORT) " and " TOSTRING(MAX_PORT));;
 }
 
 const char	*ParserPortOverFlow::what() const throw() {
-	static std::string err;
-
-	std::ostringstream oss;
-	oss << "Error: Port Overflow: must be filled with value between "
-		<< MIN_PORT << " and " << MAX_PORT;
-	err = oss.str();
-	return (err.c_str());
+	return ("Error: Port Overflow: must be filled with value between "
+			TOSTRING(MIN_PORT) " and " TOSTRING(MAX_PORT));
 }
 
 const char	*ParserPortOutOfRange::what() const throw() {
-	static std::string err;
-
-	std::ostringstream oss;
-	oss << "Error: Port Out of range: must be filled with value between "
-		<< MIN_PORT << " and " << MAX_PORT;
-	err = oss.str();
-	return (err.c_str());
+	return ("Error: Port Out of range: must be filled with value between "
+			TOSTRING(MIN_PORT) " and " TOSTRING(MAX_PORT));
 }
 
 const char	*ParserPSWEmpty::what() const throw() {

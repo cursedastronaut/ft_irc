@@ -9,6 +9,14 @@
 
 # include "settings.hpp"
 
+# ifndef STRINGIFY
+#  define STRINGIFY(x) #x
+# endif
+
+# ifndef TOSTRING
+#  define TOSTRING(x) STRINGIFY(x)
+# endif
+
 //	Exception
 class ParserPortEmptyPort : public std::exception {
 	virtual const char	*what() const throw();
