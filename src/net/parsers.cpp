@@ -47,7 +47,7 @@ int	port_parser(const char *str_port) {
 }
 
 std::string	psw_parser(const char *str_psw) {
-	if (str_psw && !*str_psw)
+	if (!str_psw || !*str_psw)
 		throw ParserPSWEmpty();
 	return(std::string(str_psw));
 }
