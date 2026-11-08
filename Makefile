@@ -3,7 +3,14 @@ NAME		= ircserv
 TEST_NET	= net_test
 #TEST_AUTH	= auth_test
 TEST_CHAN	= chan_test
-TEST_ALL	= test
+
+TEST_ALL	= all_tests
+
+TEST_NET_MEM= net_mem_test
+#TEST_AUT_MEM= auth_mem_test
+TEST_CHA_MEM= chan_mem_test
+
+TEST_MEMORY	= all_mem_tests
 
 CXX			= c++
 CXXFLAGS	= -O3 -Wall -Wextra -Werror -Iinclude -std=c++98 -MMD -MP
@@ -50,17 +57,35 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 -include $(DEPS)
 
 $(TEST_NET):
-	@$(CXX) $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm test_config.d
-	@valgrind --leak-check=full ./test_config
-	@rm test_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm -f test_config.d
+	@./test_config
+	@rm -f test_config
 
 #$(TEST_AUTH):
 
 
 $(TEST_CHAN):
-	@python3 tests/channels/run.py --sanitizers --no-leak-check
+	@python3 tests/channels/run.py
 
 $(TEST_ALL): $(TEST_NET) $(TEST_CHAN)
+
+$(TEST_NET_MEM):
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config ; rm -f test_config.d
+	@valgrind --leak-check=full --error-exitcode=1 ./test_config 
+	@rm -f test_config
+
+#$(TEST_AUT_MEM):
+
+
+$(TEST_CHA_MEM):
+	@python3 tests/channels/run.py --sanitizers
+
+$(TEST_MEMORY):
+	@echo "<<<<<    MEMORY TEST    >>>>>"
+# 	NET MEMORY TESTS
+	@make --no-print-directory $(TEST_NET_MEM)
+# 	CHANNELS MEMORY TESTS
+	@make --no-print-directory $(TEST_CHA_MEM)
 
 clean:
 	@$(RM) $(OBJ_DIR)
@@ -71,4 +96,4 @@ fclean: clean
 	@printf "\033[1;90m[✓] Binary deleted.\033[0m\n"
 
 re: fclean all
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re $(TEST_NET) $(TEST_CHAN) $(TEST_ALL) $(TEST_NET_MEM) $(TEST_CHA_MEM) $(TEST_MEMORY)
