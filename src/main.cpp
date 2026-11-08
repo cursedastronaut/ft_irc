@@ -1,7 +1,6 @@
-#include "net/irc_core.hpp"
+#include "net/ServerConfig.hpp"
 
 int	main(int ac, char **av) {
-	(void)av;
 	if (ac != 3){
 		std::cerr << "Error: Bad argument" << std::endl;
 		std::cerr << "Must use: ./ircserv <port> <password>" << std::endl;
@@ -9,6 +8,14 @@ int	main(int ac, char **av) {
 	}
 
 	try {
+		int				port = port_parser(av[1]);
+		std::string		psw = psw_parser(av[2]);
+		ServerConfig	serv(port, psw);
+
+		//	Debug / Test
+		std::cout << serv << std::endl;
+		//	~Debug / ~Test
+		
 		//	Authentification
 		//	ircserv core
 	}
