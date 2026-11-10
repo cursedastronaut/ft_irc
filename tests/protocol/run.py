@@ -13,6 +13,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
 	"parser": ["src/protocol/Parser.cpp"],
+	"client_registry": ["src/protocol/ClientRegistry.cpp"],
 }
 
 
