@@ -1,5 +1,12 @@
 #include "protocol/Parser.hpp"
+#include <cctype>
 
+
+static	void	uppercase(std::string &command)
+{
+	for (unsigned long i = 0; i < command.size(); ++i)
+		command[i] = std::toupper(static_cast<unsigned char>(command[i]));
+}
 
 static	void	skipSpace(const std::string &line, unsigned long *i)
 {
@@ -35,12 +42,14 @@ namespace irc
 			if (icommand < line.size())
 			{
 				out.command = line.substr(icommand);
+				uppercase(out.command);
 				return ParseSuccess ;
 			}
 			return ParseError ;
 		}
 
 		out.command = line.substr(icommand, i - icommand);
+		uppercase(out.command);
 		skipSpace(line, &i);
 		
 		for (unsigned long end = line.find(' ', i); end != std::string::npos; end = line.find(' ', i))

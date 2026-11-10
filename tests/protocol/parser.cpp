@@ -51,6 +51,18 @@ void emptyTrailingParamIsKeptAsEmptyString()
 	CHECK(out.params[0] == "");
 }
 
+void commandCaseIsNormalizedToUppercase()
+{
+	irc::ParsedCommand lower;
+	irc::ParsedCommand upper;
+
+	CHECK(irc::parseCommand("nick bob", lower) == irc::ParseSuccess);
+	CHECK(irc::parseCommand("NICK bob", upper) == irc::ParseSuccess);
+	CHECK(lower.command == "NICK");
+	CHECK(upper.command == "NICK");
+	CHECK(lower.command == upper.command);
+}
+
 void commandWithoutAnyParamIsValid()
 {
 	irc::ParsedCommand out;
@@ -174,6 +186,8 @@ int main()
 						  trailingParamKeepsInternalSpacesWithoutColon);
 	failures += runTests("emptyTrailingParamIsKeptAsEmptyString",
 						  emptyTrailingParamIsKeptAsEmptyString);
+	failures += runTests("commandCaseIsNormalizedToUppercase",
+						  commandCaseIsNormalizedToUppercase);
 	failures += runTests("commandWithoutAnyParamIsValid",
 						  commandWithoutAnyParamIsValid);
 	failures += runTests("commandWithPrefixAndNoParamIsValid",
