@@ -45,6 +45,10 @@ public:
 	bool consumeInvitation(ClientId id);
 	bool revokeInvitation(ClientId id);
 
+	bool isOperator(ClientId id) const;
+	bool grantOperator(ClientId id);
+	bool revokeOperator(ClientId id);
+
 	// Value storage only. Channel command/service code owns validation and
 	// policy (including keeping operators a subset of members).
 	ClientIds members;

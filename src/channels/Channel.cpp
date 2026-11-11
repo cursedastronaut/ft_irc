@@ -82,4 +82,23 @@ bool Channel::revokeInvitation(ClientId id)
 {
 	return invitations.erase(id) != 0;
 }
+
+bool Channel::isOperator(ClientId id) const
+{
+	return containsMember(id) && operators.find(id) != operators.end();
+}
+
+bool Channel::grantOperator(ClientId id)
+{
+	if (!containsMember(id))
+		return false;
+	return operators.insert(id).second;
+}
+
+bool Channel::revokeOperator(ClientId id)
+{
+	if (!containsMember(id))
+		return false;
+	return operators.erase(id) != 0;
+}
 }

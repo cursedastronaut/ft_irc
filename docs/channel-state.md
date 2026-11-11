@@ -49,3 +49,17 @@ an admission that has not committed, one-time successful consumption,
 unknown revocation, nickname changes and a different ID reusing a nickname.
 Transport's never-reused-ID contract remains responsible for avoiding
 identity reuse; a reused socket/nickname does not become an old ID here.
+
+## CHAN-05 (#40): channel-scoped operators
+
+`isOperator(id)` requires membership in this channel. Grant/revoke return
+true only for a changed role of a current member. Unknown/nonmember targets
+are rejected. Member removal clears its operator entry. If the last operator
+leaves or is demoted, no other member is automatically promoted; the channel
+may remain operatorless until it becomes empty and is recreated. Successful
+first-JOIN creator assignment remains CHAN-10, not a side effect of these
+data APIs. Authorization of the acting command issuer remains the later
+operator command layer; these methods only guard the target's membership.
+
+`python3 tests/channels/run.py --suite operators` covers both channels,
+promotion/demotion, duplicate operations, nonmembers and last-operator exit.
