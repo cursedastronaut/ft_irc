@@ -1,0 +1,15 @@
+name: Channel specification fixtures
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate allowed and denied channel specification cases
+        run: python3 -B -m unittest discover -s tests/fixtures -p 'test_*.py' -v
