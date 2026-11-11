@@ -19,6 +19,7 @@ RM			= rm -rf
 OBJ_DIR		= obj/
 SRC_DIR		= src/
 FILES		= main.cpp\
+			net/ClientRecord.cpp\
 			net/parsers.cpp\
 			net/ScopedSocket.cpp\
 			net/ServerConfig.cpp
