@@ -6,7 +6,7 @@
 /*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/10 23:38:27 by nehuen           ###   ########.fr       */
+/*   Updated: 2026/11/11 19:11:33 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,20 @@
 
 namespace irc
 {
+	bool	ClientRecord::canRegister() const
+	{
+		if (passwordAccepted && nicknameSet && userSet)
+			return true ;
+		return false ;
+	}
+	
 	void	ClientRegistry::create(ClientId id)
 	{
 		ClientRecord cr;
 
+		cr.passwordAccepted = false;
+		cr.nicknameSet = false;
+		cr.userSet = false;
 		cr.id = id;
 		_records[id] = cr;
 	}

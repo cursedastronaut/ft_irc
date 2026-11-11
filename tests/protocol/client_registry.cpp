@@ -94,6 +94,89 @@ void removingAClientThatNeverExistedIsSafe()
 	CHECK(found == false);
 }
 
+void newlyCreatedRecordCannotRegister()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.find(1, out);
+
+	CHECK(out.canRegister() == false);
+}
+
+void canRegisterIsFalseWhenAllFlagsAreFalse()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = false;
+	record.nicknameSet = false;
+	record.userSet = false;
+
+	CHECK(record.canRegister() == false);
+}
+
+void canRegisterIsFalseWithOnlyNicknameSet()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = false;
+	record.nicknameSet = true;
+	record.userSet = false;
+
+	CHECK(record.canRegister() == false);
+}
+
+void canRegisterIsFalseWithMissingPassword()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = false;
+	record.nicknameSet = true;
+	record.userSet = true;
+
+	CHECK(record.canRegister() == false);
+}
+
+void canRegisterIsFalseWithMissingNickname()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = true;
+	record.nicknameSet = false;
+	record.userSet = true;
+
+	CHECK(record.canRegister() == false);
+}
+
+void canRegisterIsFalseWithMissingUser()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = true;
+	record.nicknameSet = true;
+	record.userSet = false;
+
+	CHECK(record.canRegister() == false);
+}
+
+void canRegisterIsTrueWhenAllThreeFlagsAreSet()
+{
+	irc::ClientRecord record;
+
+	record.id = 1;
+	record.passwordAccepted = true;
+	record.nicknameSet = true;
+	record.userSet = true;
+
+	CHECK(record.canRegister() == true);
+}
+
 }
 
 int main()
@@ -113,6 +196,20 @@ int main()
 	failures += runTests("repeatedRemovalIsSafe", repeatedRemovalIsSafe);
 	failures += runTests("removingAClientThatNeverExistedIsSafe",
 						  removingAClientThatNeverExistedIsSafe);
+	failures += runTests("newlyCreatedRecordCannotRegister",
+						  newlyCreatedRecordCannotRegister);
+	failures += runTests("canRegisterIsFalseWhenAllFlagsAreFalse",
+						  canRegisterIsFalseWhenAllFlagsAreFalse);
+	failures += runTests("canRegisterIsFalseWithOnlyNicknameSet",
+						  canRegisterIsFalseWithOnlyNicknameSet);
+	failures += runTests("canRegisterIsFalseWithMissingPassword",
+						  canRegisterIsFalseWithMissingPassword);
+	failures += runTests("canRegisterIsFalseWithMissingNickname",
+						  canRegisterIsFalseWithMissingNickname);
+	failures += runTests("canRegisterIsFalseWithMissingUser",
+						  canRegisterIsFalseWithMissingUser);
+	failures += runTests("canRegisterIsTrueWhenAllThreeFlagsAreSet",
+						  canRegisterIsTrueWhenAllThreeFlagsAreSet);
 
 	return failures;
 }

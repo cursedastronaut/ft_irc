@@ -21,6 +21,11 @@ namespace irc
 	struct ClientRecord
 	{
 		ClientId	id;
+		bool		passwordAccepted;
+		bool		nicknameSet;
+		bool		userSet;
+
+		bool	canRegister() const;
 	};
 
 	class ClientRegistry
