@@ -13,8 +13,7 @@ int	main(int ac, char **av) {
 		ServerConfig	serv(port, psw);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
-		
-		std::cout << serv << std::endl;	//	Debug
+		std::cout << serv << std::endl;
 
 		while (serv.isListening()) {
 			int ready = serv.waitForEvents(POLL_TIMEOUT_MS);
@@ -22,7 +21,6 @@ int	main(int ac, char **av) {
 				int	client_fd = serv.acceptReadyClient();
 				(void)client_fd;
 			}
-			std::cout << serv << std::endl;	//	Debug
 		}
 		
 	}
