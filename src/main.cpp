@@ -12,12 +12,19 @@ int	main(int ac, char **av) {
 		std::string		psw = psw_parser(av[2]);
 		ServerConfig	serv(port, psw);
 
-		//	Debug / Test
-		std::cout << serv << std::endl;
-		//	~Debug / ~Test
+		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		
-		//	Authentification
-		//	ircserv core
+		std::cout << serv << std::endl;	//	Debug
+
+		while (serv.isListening()) {
+			int ready = serv.waitForEvents(POLL_TIMEOUT_MS);
+			if (ready > 0 && serv.isListenerReady()) {
+				int	client_fd = serv.acceptReadyClient();
+				(void)client_fd;
+			}
+			std::cout << serv << std::endl;	//	Debug
+		}
+		
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
