@@ -43,12 +43,13 @@ jobs:
           rm -f test_socket_config
   sanitizers:
     name: Valgrind & Sanitizers (NET)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Install valgrind
-        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - name: Ensure Valgrind is available
+        timeout-minutes: 5
+        run: bash .github/scripts/ensure-valgrind.sh
       - name: Check memory leaks (ServerConfig)
         env:
           CXX: clang++
