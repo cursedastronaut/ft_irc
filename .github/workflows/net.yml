@@ -6,6 +6,12 @@ permissions:
   contents: read
 env:
   CXXFLAGS: -O3 -Wall -Wextra -Werror -Iinclude -std=c++98
+  SRC_FILE: >-
+            src/net/parsers.cpp
+            src/net/ScopedSocket.cpp
+            src/net/ClientRecord.cpp
+            src/net/ServerConfig.cpp
+
 jobs:
   net:
     name: C++98 (${{ matrix.os }}, ${{ matrix.cxx }})
@@ -25,9 +31,16 @@ jobs:
         env:
           CXX: ${{ matrix.cxx }}
         run: |
-          $CXX $CXXFLAGS src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_config.cpp -o test_config
           ./test_config
           rm -f test_config
+      - name: Build and run focused Server Socket test
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: |
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_socket_config.cpp -o test_socket_config
+          ./test_socket_config
+          rm -f test_socket_config
   sanitizers:
     name: Valgrind & Sanitizers (NET)
     runs-on: ubuntu-latest
@@ -40,6 +53,13 @@ jobs:
         env:
           CXX: clang++
         run: |
-          $CXX $CXXFLAGS src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config
-          valgrind --leak-check=full --error-exitcode=1 ./test_config
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_config.cpp -o test_config
+          valgrind --leak-check=full --track-fds=yes --error-exitcode=1 ./test_config
           rm -f test_config
+      - name: Check memory leaks (Socket config)
+        env:
+          CXX: clang++
+        run: |
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_socket_config.cpp -o test_socket_config
+          valgrind --leak-check=full --track-fds=yes --error-exitcode=1 ./test_socket_config
+          rm -f test_socket_config

@@ -96,6 +96,6 @@ int main() {
 		std::cout << "[OK] ClientOutOfRange at MAX_CLIENT (" << MAX_CLIENT << ") -> " << e.what() << std::endl;
 	}
 	assert(serv.getClientNb() == MAX_CLIENT);
-
+	std::cout << "--- All ServerConfig tests passed successfully! ---" << std::endl;
 	return (0);
 }
