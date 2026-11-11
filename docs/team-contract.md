@@ -23,12 +23,16 @@ Approval of a contract is distinct from implementing its real provider.
 | Person 2 | `src/protocol`, `src/commands/auth` | Person 3 |
 | Person 3 | `src/channels`, `src/commands/channel` | Person 1 |
 
-All three approve `include/contracts`. This branch adds minimal proposed
-identity and shared casemapping headers there; it does not implement transport/protocol
-interfaces or rename any frozen API. Tests are isolated in `tests/channels`;
-the only CI addition is `.github/workflows/channels.yml`. The existing
-templates and root README are untouched. The requested grouped delivery uses task-specific commits. Each task keeps its
-original half-day-or-less scope; the grouping does not enlarge any ticket.
+All three approve `include/contracts`. The identity, casemapping and
+transport/protocol headers are merged prerequisites. This PR adds the
+ChannelService/IdentityLookup boundary without renaming those existing
+interfaces. Contract fixtures are in `tests/contracts`; permission fixtures
+and resource checks are in `tests/fixtures` and `tests/support`. Existing
+contract CI discovers the new C++ suite; the additional fixture workflow
+runs the Python checks. The templates and root README are untouched.
+The requested grouped delivery uses task-specific commits; each task keeps
+its original half-day-or-less scope. Shared approval is a merge gate, not
+permission to silently implement another person's provider.
 
 ## Identity and model (CHAN-01)
 
