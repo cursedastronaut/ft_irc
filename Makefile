@@ -19,8 +19,9 @@ RM			= rm -rf
 OBJ_DIR		= obj/
 SRC_DIR		= src/
 FILES		= main.cpp\
-			net/ServerConfig.cpp\
-			net/parsers.cpp
+			net/parsers.cpp\
+			net/ScopedSocket.cpp\
+			net/ServerConfig.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))
@@ -57,9 +58,17 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 -include $(DEPS)
 
 $(TEST_NET):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config && rm -f test_config.d
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_config.cpp -o test_config ; rm -f test_config.d
 	@./test_config
 	@rm -f test_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_socket_config.cpp -o test_socket_config ; \
+	rm -f test_socket_config.d
+	@./test_socket_config
+	@rm -f test_socket_config
 
 #$(TEST_AUTH):
 
