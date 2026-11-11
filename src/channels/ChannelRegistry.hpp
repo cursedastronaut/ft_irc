@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "channels/Channel.hpp"
 
@@ -26,6 +27,10 @@ public:
 	CreateResult create(const std::string &name);
 	bool eraseEmpty(const std::string &name);
 	std::size_t size() const;
+	// Detached sorted unique IDs; exclude the actor and non-shared clients.
+	std::vector<ClientId> peersOf(ClientId actorId) const;
+	// Caller captures peers/identity and queues notifications before cleanup.
+	void removeClient(ClientId actorId);
 
 private:
 	typedef std::map<std::string, Channel> Channels;
