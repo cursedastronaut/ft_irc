@@ -34,3 +34,18 @@ independence, rejection without resetting state, empty-channel recreation
 and channel/server key separation using the actual public ServerConfig API.
 The server password never appears in output and is unaffected by channel
 state edits. The fixture does not change Person 1's configuration code.
+
+## CHAN-07 (#35): invitations
+
+`hasInvitation`, `addInvitation` and `revokeInvitation` use stable ClientIds.
+Add/revoke return true only when their set changes. `consumeInvitation(id)`
+returns false and preserves the invitation until that ID is a member;
+the JOIN caller invokes it only after successful admission is committed.
+It is never called during validation. This guards the data boundary without
+implementing JOIN admission, INVITE permissions or nickname lookup.
+
+`python3 tests/channels/run.py --suite invitations` covers duplicate adds,
+an admission that has not committed, one-time successful consumption,
+unknown revocation, nickname changes and a different ID reusing a nickname.
+Transport's never-reused-ID contract remains responsible for avoiding
+identity reuse; a reused socket/nickname does not become an old ID here.

@@ -12,6 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
+	"invitations": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"state": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",
 	          "src/channels/ChannelRegistry.cpp", "src/net/ServerConfig.cpp",
 	          "src/net/ScopedSocket.cpp", "src/net/ClientRecord.cpp"],

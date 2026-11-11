@@ -60,4 +60,26 @@ bool Channel::removeMember(ClientId id)
 	operators.erase(id);
 	return members.erase(id) != 0;
 }
+
+bool Channel::hasInvitation(ClientId id) const
+{
+	return invitations.find(id) != invitations.end();
+}
+
+bool Channel::addInvitation(ClientId id)
+{
+	return invitations.insert(id).second;
+}
+
+bool Channel::consumeInvitation(ClientId id)
+{
+	if (!containsMember(id))
+		return false;
+	return invitations.erase(id) != 0;
+}
+
+bool Channel::revokeInvitation(ClientId id)
+{
+	return invitations.erase(id) != 0;
+}
 }

@@ -39,6 +39,12 @@ public:
 	// Removal also drops this ID's channel operator role, never invitations.
 	bool removeMember(ClientId id);
 
+	bool hasInvitation(ClientId id) const;
+	bool addInvitation(ClientId id);
+	// Consume only after membership was committed by a successful JOIN.
+	bool consumeInvitation(ClientId id);
+	bool revokeInvitation(ClientId id);
+
 	// Value storage only. Channel command/service code owns validation and
 	// policy (including keeping operators a subset of members).
 	ClientIds members;
