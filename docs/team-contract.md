@@ -93,6 +93,40 @@ References for review (the subject remains authoritative):
 The stricter control/delimiter rejection and supported prefix subset above
 are proposed project decisions requiring all three owners' approval.
 
+## Message framing and limits (PROTO-01)
+
+- **Line length:** 512 bytes maximum, **including** the trailing terminator
+  (RFC 2812 standard). Lines exceeding this without a terminator found are a
+  protocol error (reject the connection or discard, never grow the buffer
+  unbounded) — this is the transport bound Person 1 (NET) must enforce: a
+  per-client read buffer must stop accumulating and signal an error once it
+  passes 512 bytes without producing a complete line, instead of growing
+  forever (unbounded-buffer DoS risk).
+- **Terminator tolerance:** accept lines ending in `\r\n` **or** bare `\n`.
+  Two different real sources justify this: the reference client (irssi, see
+  `docs/reference-client.md`) always sends strict `\r\n`; the subject's own
+  `nc` test (IV.3) sends `"com"^D"man"^D"d\n"` — terminated by bare `\n` only.
+  Requiring strict CRLF would fail the subject's own test case.
+- **Parameter limit:** 15 parameters maximum per command (RFC 2812), the last
+  of which may be a trailing parameter (starts with `:`, may contain spaces).
+- **Casemapping:** adopts the existing `irc::canonicalizeIrcName` helper
+  (`include/contracts/IrcCaseMapping.hpp`, proposed in CHAN-02's draft above)
+  for nickname comparison — one shared helper for both nickname and channel
+  lookup, no independent lowercase policy in the parser.
+
+### Examples
+
+- **Normal CRLF line:** `NICK bob\r\n` — one `recv()` call, complete line.
+- **Split across packets:** `PRIVMSG #general :hi` arrives as `"PRIVMSG #gen"`
+  in one `recv()` and `"eral :hi\r\n"` in the next — the per-client read
+  buffer accumulates both fragments; parsing only triggers once a terminator
+  (`\r\n` or `\n`) is found in the accumulated buffer, consuming only the
+  completed line and keeping any remainder for the next line.
+- **Trailing parameter with spaces:** `PRIVMSG #general :salut les amis` —
+  naive splitting on every space would wrongly cut `"salut les amis"` into
+  3 separate parameters; the `:` marks the start of a single trailing
+  parameter that extends to the end of the line, spaces included.
+
 ## Registry operations (CHAN-03)
 
 `ChannelRegistry` owns a `map<string, Channel>` by canonical key. It is
