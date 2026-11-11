@@ -18,3 +18,19 @@ Normal/error verification: `python3 tests/channels/run.py --suite membership`.
 Duplicate adds and absent removals return false; removing a member clears
 only its role. The fixture includes another member/channel and an invitation
 to catch unintended cleanup. Existing CI runs every registered suite.
+
+## CHAN-06 (#34): topic and mode storage
+
+The merged CHAN-01 model already contains `topic` and a separate
+`ChannelModes` value. No duplicate fields or replacement API are introduced.
+This task supplies focused verification of that existing implementation:
+topic/key strings start empty, invite-only/topic-restricted/key-present/
+limit-present flags start false and absent limit storage is zero. `hasKey`
+and `hasLimit` distinguish absence from their parameter storage. These are
+value defaults, not a MODE handler or permission implementation.
+
+`python3 tests/channels/run.py --suite state` verifies every default, copy
+independence, rejection without resetting state, empty-channel recreation
+and channel/server key separation using the actual public ServerConfig API.
+The server password never appears in output and is unaffected by channel
+state edits. The fixture does not change Person 1's configuration code.
