@@ -1,0 +1,552 @@
+{
+  "scope": "CORE-06 contract fixture, not live handler verification",
+  "actors": [
+    {
+      "id": 1001,
+      "nickname": "Op[One]",
+      "role": "operator in #alpha, regular in #beta"
+    },
+    {
+      "id": 1002,
+      "nickname": "MemberTwo",
+      "role": "regular in #alpha, operator in #beta"
+    },
+    {
+      "id": 1003,
+      "nickname": "MemberThree",
+      "role": "regular in both"
+    },
+    {
+      "id": 1004,
+      "nickname": "Outsider",
+      "role": "outsider"
+    }
+  ],
+  "channels": [
+    {
+      "name": "#alpha",
+      "members": [
+        1001,
+        1002,
+        1003
+      ],
+      "operators": [
+        1001
+      ]
+    },
+    {
+      "name": "#beta",
+      "members": [
+        1001,
+        1002,
+        1003
+      ],
+      "operators": [
+        1002
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "join-open",
+      "operation": "JOIN",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003,
+        1004
+      ],
+      "mutation": "add actor",
+      "numeric": null,
+      "join_invite_only": false
+    },
+    {
+      "name": "join-invite-only-denied",
+      "operation": "JOIN",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 473,
+      "join_invite_only": true
+    },
+    {
+      "name": "part-member",
+      "operation": "PART",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "remove actor",
+      "numeric": null
+    },
+    {
+      "name": "part-outsider",
+      "operation": "PART",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 442
+    },
+    {
+      "name": "message-member",
+      "operation": "PRIVMSG",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1003
+      ],
+      "mutation": "unchanged",
+      "numeric": null
+    },
+    {
+      "name": "message-outsider",
+      "operation": "PRIVMSG",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 404
+    },
+    {
+      "name": "kick-operator",
+      "operation": "KICK",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "remove target",
+      "numeric": null,
+      "target": 1002
+    },
+    {
+      "name": "kick-regular",
+      "operation": "KICK",
+      "channel": "#alpha",
+      "actor": 1003,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": 1002
+    },
+    {
+      "name": "invite-operator",
+      "operation": "INVITE",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1004
+      ],
+      "mutation": "record invitation",
+      "numeric": null,
+      "target": 1004,
+      "invite_only": true,
+      "ack_numeric": 341
+    },
+    {
+      "name": "invite-regular-restricted",
+      "operation": "INVITE",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": 1004,
+      "invite_only": true
+    },
+    {
+      "name": "topic-query-member",
+      "operation": "TOPIC_QUERY",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": true,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 331
+    },
+    {
+      "name": "topic-query-outsider",
+      "operation": "TOPIC_QUERY",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 442
+    },
+    {
+      "name": "topic-edit-member-unrestricted",
+      "operation": "TOPIC",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "replace topic",
+      "numeric": null,
+      "topic_restricted": false
+    },
+    {
+      "name": "topic-edit-member-restricted",
+      "operation": "TOPIC",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "topic_restricted": true
+    },
+    {
+      "name": "mode-set-i",
+      "operation": "MODE +i",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply +i",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied-+i",
+      "operation": "MODE +i",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-remove-i",
+      "operation": "MODE -i",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply -i",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied--i",
+      "operation": "MODE -i",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-set-t",
+      "operation": "MODE +t",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply +t",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied-+t",
+      "operation": "MODE +t",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-remove-t",
+      "operation": "MODE -t",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply -t",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied--t",
+      "operation": "MODE -t",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-set-k",
+      "operation": "MODE +k",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply +k",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied-+k",
+      "operation": "MODE +k",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-remove-k",
+      "operation": "MODE -k",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply -k",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied--k",
+      "operation": "MODE -k",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-set-o",
+      "operation": "MODE +o",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply +o",
+      "numeric": null,
+      "target": 1002
+    },
+    {
+      "name": "mode-regular-denied-+o",
+      "operation": "MODE +o",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": 1003
+    },
+    {
+      "name": "mode-remove-o",
+      "operation": "MODE -o",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply -o",
+      "numeric": null,
+      "target": 1002
+    },
+    {
+      "name": "mode-regular-denied--o",
+      "operation": "MODE -o",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": 1003
+    },
+    {
+      "name": "mode-set-l",
+      "operation": "MODE +l",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply +l",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied-+l",
+      "operation": "MODE +l",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "mode-remove-l",
+      "operation": "MODE -l",
+      "channel": "#alpha",
+      "actor": 1001,
+      "allowed": true,
+      "event_recipients": [
+        1001,
+        1002,
+        1003
+      ],
+      "mutation": "apply -l",
+      "numeric": null,
+      "target": null
+    },
+    {
+      "name": "mode-regular-denied--l",
+      "operation": "MODE -l",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482,
+      "target": null
+    },
+    {
+      "name": "operator-role-is-channel-scoped",
+      "operation": "MODE +i",
+      "channel": "#beta",
+      "actor": 1001,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 482
+    },
+    {
+      "name": "mode-query-regular-key-hidden",
+      "operation": "MODE_QUERY",
+      "channel": "#alpha",
+      "actor": 1002,
+      "allowed": true,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 324,
+      "key_visibility": "masked"
+    },
+    {
+      "name": "mode-query-outsider",
+      "operation": "MODE_QUERY",
+      "channel": "#alpha",
+      "actor": 1004,
+      "allowed": false,
+      "event_recipients": [],
+      "mutation": "unchanged",
+      "numeric": 442
+    }
+  ],
+  "combined_modes": [
+    {
+      "input": "+it-k+ol",
+      "arguments": [
+        "MemberTwo",
+        "4"
+      ],
+      "consumed": [
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "effects": [
+        "+i",
+        "+t",
+        "-k",
+        "+o MemberTwo",
+        "+l 4"
+      ]
+    },
+    {
+      "input": "+o+l",
+      "arguments": [],
+      "error": 461,
+      "effects": []
+    },
+    {
+      "input": "+x+i",
+      "arguments": [],
+      "error": 472,
+      "effects": [
+        "+i"
+      ]
+    }
+  ]
+}
