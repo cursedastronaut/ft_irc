@@ -13,3 +13,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate allowed and denied channel specification cases
         run: python3 -B -m unittest discover -s tests/fixtures -p 'test_*.py' -v
+      - name: Verify fixture isolation and bounded failure cleanup
+        run: python3 -B -m unittest discover -s tests/support -p 'test_*.py' -v
