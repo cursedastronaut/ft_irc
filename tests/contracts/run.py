@@ -13,6 +13,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
 	"protocol_contract": [],
+	"channel_contract": ["tests/contracts/fixtures/identity_stub.cpp",
+	                     "tests/contracts/fixtures/channel_stub.cpp"],
 }
 
 

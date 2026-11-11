@@ -2,21 +2,18 @@
 
 ## Status and dependencies
 
-**Draft for team approval, not an approved or frozen shared contract.**
-The base `test` commit `1a6cb239f53bc2161eab634753dd3b83bad64394` contains
-only `.github/` templates and the root README. CORE-02 (#2), CORE-03 (#5)
-and PROTO-01 (#13) have no merged contract or approved stubs in that base.
-This branch prepares the requested CHAN-01 (#9), CHAN-02 (#20) and
-CHAN-03 (#26) code for review in isolation. It does **not** claim those
-prerequisites have been completed or that team approval was obtained.
+This CORE-03 update is based on `test` at
+`eca2d470e9c7ed6d2e17733498a0ba80d19d10ae`. CORE-01 ownership rules,
+CORE-02's Protocol.hpp, the reference-client document and PROTO-01 grammar
+are already present in that base, even where the issue tracker remains open.
+The earlier CHAN-01/02/03 foundation code is merged and retained.
 
-Before merging, all three owners must approve the minimal shared types and
-policy here (or replace this proposal with the approved prerequisite work).
-The dependency/start gate in CONTRIBUTING is outstanding: these are draft
-changes, not a claim of dependency-compliant completed work. No other CORE
-issue is closed by this proposal. Person 1 must run the focused tests and
-confirm no unrelated behavior changed. Any newly approved signature must be
-recorded before integrating callers.
+**New CORE-03 signatures and policy decisions below are submitted for review,
+not represented as already approved.** All three owners must approve shared
+contract additions before merge. Person 1 is the requested reviewer.
+No Person 2 implementation is supplied or changed by this PR: a read-only
+provider interface and separately compiled test doubles establish the boundary.
+Approval of a contract is distinct from implementing its real provider.
 
 ## Ownership boundaries from CORE-01
 
@@ -30,9 +27,8 @@ All three approve `include/contracts`. This branch adds minimal proposed
 identity and shared casemapping headers there; it does not implement transport/protocol
 interfaces or rename any frozen API. Tests are isolated in `tests/channels`;
 the only CI addition is `.github/workflows/channels.yml`. The existing
-templates and root README are untouched. The requested three-task archive
-uses separate commits on one branch; CORE-01 otherwise prefers one issue
-per branch/PR, so reviewers may split/cherry-pick these commits if required.
+templates and root README are untouched. The requested grouped delivery uses task-specific commits. Each task keeps its
+original half-day-or-less scope; the grouping does not enlarge any ticket.
 
 ## Identity and model (CHAN-01)
 
@@ -149,10 +145,64 @@ topic/modes/invitation state, so recreation receives fresh defaults.
 Invitations do not keep an otherwise empty channel alive. Checking
 membership for erasure does not implement JOIN/PART or CHAN-04 operations.
 
-Future CORE-03 service APIs (`handle`, `removeClient`, `peersOf`) and
-identity lookup are intentionally not stubbed or implemented here. There
-are no consumers on this base to update and no implementation of protocol,
-commands, socket handling or an `ircserv` executable in this patch.
+## Shared channel boundary (CORE-03)
+
+`include/contracts/ChannelService.hpp` adds the following interfaces without
+renaming CORE-02's existing global `protocol`, `transport`, `ClientIdentity`
+or `enqueueResult` types:
+
+| Provider | Signature | Meaning |
+| --- | --- | --- |
+| Person 2: `irc::IdentityLookup` | `bool identityOf(ClientId, ::ClientIdentity &out) const` | Copies a snapshot; false leaves output unchanged |
+| Person 2: `irc::IdentityLookup` | `bool clientIdForNickname(const std::string &, ClientId &out) const` | Uses the shared canonical nickname policy; false leaves output unchanged |
+| Person 2: `irc::IdentityLookup` | `bool isRegistered(ClientId) const` | False for unknown or incomplete sessions |
+| Person 3: `irc::ChannelService` | `void handle(ClientId, const ParsedCommand &)` | Validates before mutation and queues replies via transport |
+| Person 3: `irc::ChannelService` | `void removeClient(ClientId)` | Idempotent state cleanup; caller owns notifications |
+| Person 3: `irc::ChannelService` | `std::vector<ClientId> peersOf(ClientId) const` | Detached, deduplicated IDs excluding the actor, with no FD/iterator exposure |
+
+The lookup provider is a required integration interface, not an adapter that
+pretends the current minimal ClientRegistry already implements identity or
+registration. Real nickname lookup/registration and all command handlers
+remain Person 2's tasks. The separately compiled fixtures demonstrate only
+these signatures, snapshot isolation and a validation-before-mutation example;
+their `FIXTURE` command is test-only and is not an IRC feature.
+
+### Ownership and lifecycle ordering
+
+Before releasing a connection: (1) protocol snapshots the actor's identity
+and channel peers while both are live, (2) protocol queues NICK/QUIT or other
+applicable notifications to the deduplicated recipients, (3) channel cleanup
+removes memberships, operators and invitations and deletes empty channels,
+(4) protocol releases nickname/identity state, then (5) transport closes and
+removes its descriptor/buffers. No channel handler closes descriptors or
+calls recv/send. `requestDisconnection(..., afterFlush)` keeps CORE-02's
+existing queue-drain semantics; a duplicate cleanup must have no effect.
+
+### Channel policies to approve
+
+- One canonical key uses the existing RFC1459 helper and CHAN-02 validation;
+  display spelling is the first creator's spelling, not identity.
+- The successful first JOIN grants the creator operator status. A duplicate
+  JOIN never grants or restores privilege. Merely adding data-model membership
+  does not implement JOIN or automatically grant an operator role.
+- A departing/demoted last operator causes **no automatic succession**.
+  Existing regular members stay regular; an operatorless channel remains
+  until its last member leaves. Recreation starts with fresh state and a
+  newly joining creator. This is a project policy, not an extra IRC mode.
+- Empty channels are deleted even if topic, modes or invitations remain.
+  Removing a client revokes invitations everywhere, including channels the
+  client has never joined. Peer notifications happen before removal.
+- All required parameter/registration/permission checks precede mutation of
+  that operation. Rejected validation changes no topic, role or membership.
+- Mixed MODE is processed in order after a parameter-consumption plan is
+  built. Known `+k`, `+o`, `-o`, `+l` consume one argument; `-k`, `-l`,
+  `+/-i`, `+/-t` consume none. Unknown flags emit 472 and consume none.
+  An invalid known operation consumes its assigned argument but changes no
+  state; valid independent operations may succeed. Missing required arguments
+  emit 461 and stop the remaining operations to avoid reinterpreting tokens.
+  These are contract expectations, not an implementation of MODE parsing.
+
+The root README and other owners' implementations remain unchanged.
 
 ## Verification
 
