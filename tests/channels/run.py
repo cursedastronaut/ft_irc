@@ -12,6 +12,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
+	"cleanup": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",
+	            "src/channels/ChannelRegistry.cpp"],
 	"peers": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",
 	          "src/channels/ChannelRegistry.cpp"],
 	"operators": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],

@@ -75,3 +75,27 @@ delegate this data operation; the registry does not build or send NICK/QUIT.
 `python3 tests/channels/run.py --suite peers` covers two shared channels,
 one unrelated channel, an invite-only outsider, an unknown actor and snapshot
 isolation after membership changes.
+
+## CHAN-08 (#48): disconnect cleanup
+
+`ChannelRegistry::removeClient(actorId)` drops membership, operator status
+and invitations for this ID in every channel, including invitations in
+channels the actor never joined. It then erases empty channels, including
+any pre-existing empty entries. Repeated cleanup is safe. Erasure uses
+C++98 iterator ordering and preserves other live channels/pointers.
+It has no transport ownership and emits no notification. The caller first
+captures the identity and `peersOf` result, queues departure notifications,
+then invokes this data hook before releasing protocol identity/transport.
+This hook backs the future concrete ChannelService without adding a dummy
+`handle()` or depending on the CORE contract PR to compile.
+
+`python3 tests/channels/run.py --suite cleanup` covers multi-channel fake
+disconnect, consecutive empty erasures, invitations without membership,
+unrelated state preservation, last-operator exit, repeated/unknown cleanup
+and fresh state after recreation. It does not simulate a live socket close.
+
+## Stopping point
+
+CHAN-10 (#49) requires PROTO-12 (#39), Person 2's actual parameter and
+registration guards. Those are absent from this base. This delivery stops
+before JOIN; no fake production guard or work on later issues is included.

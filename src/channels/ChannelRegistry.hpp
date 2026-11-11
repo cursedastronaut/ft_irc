@@ -29,6 +29,8 @@ public:
 	std::size_t size() const;
 	// Detached sorted unique IDs; exclude the actor and non-shared clients.
 	std::vector<ClientId> peersOf(ClientId actorId) const;
+	// Caller captures peers/identity and queues notifications before cleanup.
+	void removeClient(ClientId actorId);
 
 private:
 	typedef std::map<std::string, Channel> Channels;

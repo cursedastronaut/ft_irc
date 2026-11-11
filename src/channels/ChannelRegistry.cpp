@@ -78,4 +78,21 @@ std::vector<ClientId> ChannelRegistry::peersOf(ClientId actorId) const
 	}
 	return std::vector<ClientId>(peers.begin(), peers.end());
 }
+
+void ChannelRegistry::removeClient(ClientId actorId)
+{
+	Channels::iterator channel = channels_.begin();
+	while (channel != channels_.end())
+	{
+		channel->second.removeMember(actorId);
+		channel->second.revokeInvitation(actorId);
+		if (channel->second.members.empty())
+		{
+			Channels::iterator empty = channel++;
+			channels_.erase(empty);
+		}
+		else
+			++channel;
+	}
+}
 }
