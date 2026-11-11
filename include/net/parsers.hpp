@@ -41,4 +41,4 @@ class ParserPSWEmpty : public std::exception {
 int				port_parser(const char *str_port);
 std::string		psw_parser(const char *str_psw);
 
-#endif
+#endif	//	PARSER_HPP
