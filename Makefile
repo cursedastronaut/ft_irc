@@ -79,9 +79,17 @@ $(TEST_CHAN):
 $(TEST_ALL): $(TEST_NET) $(TEST_CHAN)
 
 $(TEST_NET_MEM):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ServerConfig.cpp tests/net/test_config.cpp -o test_config && rm -f test_config.d
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_config.cpp -o test_config ; rm -f test_config.d
 	@valgrind --leak-check=full --error-exitcode=1 ./test_config 
 	@rm -f test_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_socket_config.cpp -o test_socket_config ; \
+	rm -f test_socket_config.d
+	@valgrind --leak-check=full --error-exitcode=1  ./test_socket_config
+	@rm -f test_socket_config
 
 #$(TEST_AUT_MEM):
 
