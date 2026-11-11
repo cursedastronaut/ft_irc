@@ -59,4 +59,23 @@ std::size_t ChannelRegistry::size() const
 {
 	return channels_.size();
 }
+
+std::vector<ClientId> ChannelRegistry::peersOf(ClientId actorId) const
+{
+	Channel::ClientIds peers;
+	for (Channels::const_iterator channel = channels_.begin();
+	     channel != channels_.end(); ++channel)
+	{
+		if (!channel->second.containsMember(actorId))
+			continue;
+		const Channel::ClientIds &members = channel->second.members;
+		for (Channel::ClientIds::const_iterator member = members.begin();
+		     member != members.end(); ++member)
+		{
+			if (*member != actorId)
+				peers.insert(*member);
+		}
+	}
+	return std::vector<ClientId>(peers.begin(), peers.end());
+}
 }

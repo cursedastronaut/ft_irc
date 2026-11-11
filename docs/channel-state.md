@@ -63,3 +63,15 @@ operator command layer; these methods only guard the target's membership.
 
 `python3 tests/channels/run.py --suite operators` covers both channels,
 promotion/demotion, duplicate operations, nonmembers and last-operator exit.
+
+## CHAN-09 (#41): peer snapshots
+
+`ChannelRegistry::peersOf(actorId)` returns a sorted, deduplicated vector of
+other member IDs from channels shared with the actor. Invitations, outsider
+channels and the actor itself are excluded. The returned collection owns its
+values and survives later registry changes. The future ChannelService can
+delegate this data operation; the registry does not build or send NICK/QUIT.
+
+`python3 tests/channels/run.py --suite peers` covers two shared channels,
+one unrelated channel, an invite-only outsider, an unknown actor and snapshot
+isolation after membership changes.
