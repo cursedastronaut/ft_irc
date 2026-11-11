@@ -34,6 +34,11 @@ public:
 	const std::string &canonicalName() const;
 	const std::string &displayName() const;
 
+	bool containsMember(ClientId id) const;
+	bool addMember(ClientId id);
+	// Removal also drops this ID's channel operator role, never invitations.
+	bool removeMember(ClientId id);
+
 	// Value storage only. Channel command/service code owns validation and
 	// policy (including keeping operators a subset of members).
 	ClientIds members;

@@ -12,6 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
+	"membership": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"model": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"names": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"registry": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",

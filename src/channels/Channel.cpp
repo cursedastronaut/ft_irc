@@ -44,4 +44,20 @@ const std::string &Channel::displayName() const
 {
 	return displayName_;
 }
+
+bool Channel::containsMember(ClientId id) const
+{
+	return members.find(id) != members.end();
+}
+
+bool Channel::addMember(ClientId id)
+{
+	return members.insert(id).second;
+}
+
+bool Channel::removeMember(ClientId id)
+{
+	operators.erase(id);
+	return members.erase(id) != 0;
+}
 }
