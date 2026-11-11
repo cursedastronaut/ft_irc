@@ -177,6 +177,84 @@ void canRegisterIsTrueWhenAllThreeFlagsAreSet()
 	CHECK(record.canRegister() == true);
 }
 
+void setNicknameThenLookupFindsTheSameClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId found;
+
+	registry.create(1);
+	registry.setNickname(1, "bob");
+
+	CHECK(registry.clientIdForNickname("bob", found) == true);
+	CHECK(found == 1UL);
+}
+
+void lookupOnUnknownNicknameFailsWithoutTouchingOut()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId found = 999;
+
+	bool success = registry.clientIdForNickname("ghost", found);
+
+	CHECK(success == false);
+	CHECK(found == 999UL);
+}
+
+void lookupOnUnknownNicknameDoesNotInsertAFakeClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId found;
+
+	registry.clientIdForNickname("ghost", found);
+	registry.create(1);
+	registry.setNickname(1, "ghost");
+
+	CHECK(registry.clientIdForNickname("ghost", found) == true);
+	CHECK(found == 1UL);
+}
+
+void setNicknameOnAnUncreatedClientDoesNotInsertAFakeClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.setNickname(999, "ghost");
+
+	CHECK(registry.find(999, out) == false);
+}
+
+void differentSpellingVariantsResolveToTheSameClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId foundUpper;
+	irc::ClientId foundBracket;
+
+	registry.create(1);
+	registry.setNickname(1, "Bob[x]");
+
+	CHECK(registry.clientIdForNickname("BOB[X]", foundUpper) == true);
+	CHECK(registry.clientIdForNickname("bob{x}", foundBracket) == true);
+	CHECK(foundUpper == 1UL);
+	CHECK(foundBracket == 1UL);
+}
+
+void twoClientsWithDifferentNicknamesDoNotCollide()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId foundFirst;
+	irc::ClientId foundSecond;
+
+	registry.create(1);
+	registry.create(2);
+	registry.setNickname(1, "bob");
+	registry.setNickname(2, "baz");
+
+	CHECK(registry.clientIdForNickname("bob", foundFirst) == true);
+	CHECK(registry.clientIdForNickname("baz", foundSecond) == true);
+	CHECK(foundFirst == 1UL);
+	CHECK(foundSecond == 2UL);
+}
+
 }
 
 int main()
@@ -210,6 +288,18 @@ int main()
 						  canRegisterIsFalseWithMissingUser);
 	failures += runTests("canRegisterIsTrueWhenAllThreeFlagsAreSet",
 						  canRegisterIsTrueWhenAllThreeFlagsAreSet);
+	failures += runTests("setNicknameThenLookupFindsTheSameClient",
+						  setNicknameThenLookupFindsTheSameClient);
+	failures += runTests("lookupOnUnknownNicknameFailsWithoutTouchingOut",
+						  lookupOnUnknownNicknameFailsWithoutTouchingOut);
+	failures += runTests("lookupOnUnknownNicknameDoesNotInsertAFakeClient",
+						  lookupOnUnknownNicknameDoesNotInsertAFakeClient);
+	failures += runTests("setNicknameOnAnUncreatedClientDoesNotInsertAFakeClient",
+						  setNicknameOnAnUncreatedClientDoesNotInsertAFakeClient);
+	failures += runTests("differentSpellingVariantsResolveToTheSameClient",
+						  differentSpellingVariantsResolveToTheSameClient);
+	failures += runTests("twoClientsWithDifferentNicknamesDoNotCollide",
+						  twoClientsWithDifferentNicknamesDoNotCollide);
 
 	return failures;
 }
