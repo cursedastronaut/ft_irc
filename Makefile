@@ -69,7 +69,8 @@ $(TEST_NET):
 	tests/net/test_socket_config.cpp -o test_socket_config ; \
 	rm -f test_socket_config.d
 	@./test_socket_config
-	@rm -f test_socket_configsers.cpp src/net/ScopedSocket.cpp \
+	@rm -f test_socket_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
 	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
 	tests/net/test_recv_result.cpp -o test_recv_result ; \
 	rm -f test_recv_result.d
