@@ -160,6 +160,10 @@ int	ServerConfig::getEffectivePollTimeout(int defaault_timeout_ms) const {
 	return (defaault_timeout_ms);
 }
 
+size_t	ServerConfig::getLineBudget() const {
+	return (_line_budget);
+}
+
 std::string	ServerConfig::getClientDisconnectReason(ClientId id) const {
 	const netClientRecord	*rec = getClientById(id);
 	if (rec == NULL)
@@ -169,7 +173,7 @@ std::string	ServerConfig::getClientDisconnectReason(ClientId id) const {
 
 bool	ServerConfig::isClientReadable(ClientId id) const {
 	const netClientRecord	*rec = getClientById(id);
-	if (rec == NULL || rec->fd < 0)
+	if (rec == NULL || rec->fd < 0 || rec->marked_for_cleanup)
 		return (false);
 	for (size_t i = 1; i < _poll_fds.size(); ++i) {
 		if (_poll_fds[i].fd == rec->fd)
