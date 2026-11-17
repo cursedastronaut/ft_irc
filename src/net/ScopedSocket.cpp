@@ -1,5 +1,8 @@
 #include "net/ScopedSocket.hpp"
 
+namespace irc
+{
+
 ScopedSocket::ScopedSocket(): _fd(-1) {
 
 }
@@ -55,3 +58,5 @@ const char	*ScopedSocket::SocketCreationException::what() const throw() {
 const char	*ScopedSocket::InvalidFamilyException::what() const throw() {
 	return("Error: Unsupported addresse familly (must be AF_INET or AF_INET6)");
 }
+
+}	//	namespace irc

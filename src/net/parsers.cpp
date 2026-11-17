@@ -1,5 +1,8 @@
 #include "net/parsers.hpp"
 
+namespace irc
+{
+
 //	Exception
 const char *ParserPortEmptyPort::what() const throw() {
 	return ("Error: Port empty: must be filled with value between "
@@ -51,3 +54,5 @@ std::string	psw_parser(const char *str_psw) {
 		throw ParserPSWEmpty();
 	return(std::string(str_psw));
 }
+
+}	//	naespace irc
