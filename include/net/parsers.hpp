@@ -17,28 +17,38 @@
 #  define TOSTRING(x) STRINGIFY(x)
 # endif
 
+namespace irc
+{
+
 //	Exception
 class ParserPortEmptyPort : public std::exception {
-	virtual const char	*what() const throw();
+	public:
+		virtual const char	*what() const throw();
 };
 
 class ParserPortIvalideFormat : public std::exception {
-	virtual const char	*what() const throw();
+	public:
+		virtual const char	*what() const throw();
 };
 
 class ParserPortOverFlow : public std::exception {
-	virtual const char	*what() const throw();
+	public:
+		virtual const char	*what() const throw();
 };
 
 class ParserPortOutOfRange : public std::exception {
-	virtual const char	*what() const throw();
+	public:
+		virtual const char	*what() const throw();
 };
 
 class ParserPSWEmpty : public std::exception {
-	virtual const char	*what() const throw();
+	public:
+		virtual const char	*what() const throw();
 };
 
 int				port_parser(const char *str_port);
 std::string		psw_parser(const char *str_psw);
+
+}	//	namespace irc
 
 #endif	//	PARSER_HPP

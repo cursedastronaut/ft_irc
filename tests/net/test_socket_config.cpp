@@ -15,21 +15,21 @@ int main(void) {
 	// =========================================================================
 	{
 		try {
-			ScopedSocket bad_sock(-1);
+			irc::ScopedSocket bad_sock(-1);
 			assert(false);
-		} catch (const ScopedSocket::SocketCreationException &) {
+		} catch (const irc::ScopedSocket::SocketCreationException &) {
 			std::cout << "[OK] Construction with invalid FD (-1) throws without leak" << std::endl;
 		}
 
 		try {
-			ScopedSocket bad_family;
+			irc::ScopedSocket bad_family;
 			bad_family.openTcp(AF_UNIX);
 			assert(false);
-		} catch (const ScopedSocket::InvalidFamilyException &) {
+		} catch (const irc::ScopedSocket::InvalidFamilyException &) {
 			std::cout << "[OK] Unsupported family rejected cleanly" << std::endl;
 		}
 
-		ScopedSocket sock_v4;
+		irc::ScopedSocket sock_v4;
 		sock_v4.openTcp(AF_INET);
 		assert(sock_v4.isValid());
 		int raw_fd = sock_v4.release();
@@ -37,8 +37,8 @@ int main(void) {
 		assert(sock_v4.get() == -1);
 
 		// Transfer ownership to a second ScopedSocket and test swap/reset
-		ScopedSocket owner2(raw_fd);
-		ScopedSocket owner3;
+		irc::ScopedSocket owner2(raw_fd);
+		irc::ScopedSocket owner3;
 		owner2.swap(owner3);
 		assert(!owner2.isValid());
 		assert(owner3.get() == raw_fd);
@@ -54,16 +54,16 @@ int main(void) {
 	// - A setup failure releases the socket.
 	// =========================================================================
 	{
-		ServerConfig uninit_serv(18080, "secret");
+		irc::ServerConfig uninit_serv(18080, "secret");
 		try {
 			uninit_serv.configureListenerSocket(); // No socket created yet -> fails & releases
 			assert(false);
-		} catch (const ServerConfig::SocketOptionException &) {
+		} catch (const irc::ServerConfig::SocketOptionException &) {
 			assert(uninit_serv.getListenFd() == -1);
 			std::cout << "[OK] Setup failure releases the socket and leaves FD at -1" << std::endl;
 		}
 
-		ServerConfig cfg_serv(18080, "secret");
+		irc::ServerConfig cfg_serv(18080, "secret");
 		cfg_serv.createListenerSocket(AF_INET);
 		cfg_serv.configureListenerSocket();
 		int flags = fcntl(cfg_serv.getListenFd(), F_GETFL, 0);
@@ -83,7 +83,7 @@ int main(void) {
 		int test_port = 18080;
 		bool bound = false;
 		for (; test_port <= 18180; ++test_port) {
-			ServerConfig probe(test_port, "super_secret_psw");
+			irc::ServerConfig probe(test_port, "super_secret_psw");
 			try {
 				probe.initListener(INADDR_LOOPBACK, LISTEN_BACKLOG);
 				bound = true;
@@ -94,7 +94,7 @@ int main(void) {
 		assert(bound);
 
 		// Bind valid free loopback port and reach listening state
-		ServerConfig listener(test_port, "super_secret_psw");
+		irc::ServerConfig listener(test_port, "super_secret_psw");
 		listener.initListener(INADDR_LOOPBACK, LISTEN_BACKLOG);
 		assert(listener.isListening());
 		assert(listener.getListenFd() >= 0);
@@ -108,25 +108,25 @@ int main(void) {
 				  << " | Startup: " << oss.str() << std::endl;
 
 		// Occupied port fails cleanly without disturbing the process owning it
-		ServerConfig colliding(test_port, "other_psw");
+		irc::ServerConfig colliding(test_port, "other_psw");
 		colliding.createListenerSocket(AF_INET);
 		try {
 			colliding.bindListenerSocket(INADDR_LOOPBACK);
 			assert(false);
-		} catch (const ServerConfig::SocketBindException &) {
+		} catch (const irc::ServerConfig::SocketBindException &) {
 			assert(colliding.getListenFd() == -1);
 			assert(listener.isListening());
 			std::cout << "[OK] Occupied port fails cleanly and releases colliding FD" << std::endl;
 		}
 
 		// Injected listen failure (backlog <= 0) unwinds completed startup steps
-		ServerConfig fail_listen(test_port + 1, "psw");
+		irc::ServerConfig fail_listen(test_port + 1, "psw");
 		fail_listen.createListenerSocket(AF_INET);
 		fail_listen.configureListenerSocket();
 		try {
 			fail_listen.startListening(0);
 			assert(false);
-		} catch (const ServerConfig::SocketListenException &) {
+		} catch (const irc::ServerConfig::SocketListenException &) {
 			assert(fail_listen.getListenFd() == -1);
 			assert(!fail_listen.isListening());
 			std::cout << "[OK] Injected listen failure unwinds socket cleanly" << std::endl;
@@ -145,7 +145,7 @@ int main(void) {
 		assert(listener.acceptReadyClient() == -1);
 
 		// Connect client1 BEFORE calling waitForEvents()
-		ScopedSocket client1;
+		irc::ScopedSocket client1;
 		client1.openTcp(AF_INET);
 		struct sockaddr_in caddr;
 		std::memset(&caddr, 0, sizeof(caddr));
@@ -174,11 +174,11 @@ int main(void) {
 		assert(listener.waitForEvents(10) == 0);
 		std::cout << "[OK] Single bounded accept succeeded without blocking loop" << std::endl;
 
-		// Verify ClientId and ClientRecord for first client
+		// Verify ClientId and netClientRecord for first client
 		irc::ClientId id1 = listener.getClientIdByFd(accepted_fd1);
 		assert(id1 == 1);
 		assert(listener.getLastAcceptedClientId() == id1);
-		const ClientRecord *rec1 = listener.getClientById(id1);
+		const irc::netClientRecord *rec1 = listener.getClientById(id1);
 		assert(rec1 != NULL);
 		assert(rec1->id == id1);
 		assert(rec1->fd == accepted_fd1);
@@ -186,10 +186,21 @@ int main(void) {
 		assert(rec1->out_buf.empty());
 		assert(listener.getClientByFd(accepted_fd1) == rec1);
 
+		// ================================================================
+		// [NET-15] Accepted client socket must be non-blocking
+		// ================================================================
+
+		int accepted_flags = fcntl(accepted_fd1, F_GETFL, 0);
+
+		assert(accepted_flags >= 0);
+		assert((accepted_flags & O_NONBLOCK) != 0);
+
+		std::cout << "[OK] Accepted client socket is non-blocking" << std::endl;
+
 		// [NET-14] Two connections have different IDs even after an fd is reused:
 		// Keep client1 open while removing id1 (closes accepted_fd1), so accepted_fd1 is the
 		// lowest available FD in the process when acceptReadyClient() accepts client2!
-		ScopedSocket client2;
+		irc::ScopedSocket client2;
 		client2.openTcp(AF_INET);
 		assert(::connect(client2.get(), reinterpret_cast<struct sockaddr *>(&caddr), sizeof(caddr)) == 0);
 
@@ -210,12 +221,30 @@ int main(void) {
 		assert(listener.getClientById(id2) != NULL);
 		assert(listener.getClientById(id2)->fd == accepted_fd2);
 		std::cout << "[OK] Reused FD (" << accepted_fd2 << ") received a new unique ClientId ("
-				  << id1 << " -> " << id2 << ")" << std::endl;
+				<< id1 << " -> " << id2 << ")" << std::endl;
+
+
+		// ================================================================
+		// [NET-15] Every active client descriptor is non-blocking
+		// ================================================================
+
+		const std::vector<int>& client_fds = listener.getClientFds();
+
+		assert(!client_fds.empty());
+
+		for (size_t i = 0; i < client_fds.size(); ++i) {
+		    int flags = fcntl(client_fds[i], F_GETFL, 0);
+		
+		    assert(flags >= 0);
+		    assert((flags & O_NONBLOCK) != 0);
+		}
+
+		std::cout << "[OK] All active client sockets are non-blocking" << std::endl;
 
 		// ID exhaustion refuses a connection rather than wrapping into an existing identity
 		listener.setNextClientId(ULONG_MAX);
 
-		ScopedSocket client3;
+		irc::ScopedSocket client3;
 		client3.openTcp(AF_INET);
 		assert(::connect(client3.get(), reinterpret_cast<struct sockaddr *>(&caddr), sizeof(caddr)) == 0);
 		assert(listener.waitForEvents(50) == 1);
@@ -225,7 +254,7 @@ int main(void) {
 		assert(listener.isIdExhausted());
 
 		// Next connection after ULONG_MAX must be refused without wrapping around
-		ScopedSocket client4;
+		irc::ScopedSocket client4;
 		client4.openTcp(AF_INET);
 		assert(::connect(client4.get(), reinterpret_cast<struct sockaddr *>(&caddr), sizeof(caddr)) == 0);
 		assert(listener.waitForEvents(50) == 1);
@@ -234,6 +263,22 @@ int main(void) {
 		assert(listener.getClientById(id2) != NULL);
 		assert(listener.getClientById(ULONG_MAX) != NULL);
 		std::cout << "[OK] ID exhaustion at ULONG_MAX refuses new connection without wrapping" << std::endl;
+
+		// ================================================================
+		// [NET-15] Non-blocking flag survives poll cycles
+		// ================================================================
+
+		assert(listener.waitForEvents(10) == 0);
+
+		for (size_t i = 0; i < listener.getClientFds().size(); ++i) {
+		    int flags = fcntl(listener.getClientFds()[i], F_GETFL, 0);
+		
+		    assert(flags >= 0);
+		    assert((flags & O_NONBLOCK) != 0);
+		}
+
+		std::cout << "[OK] Non-blocking mode preserved after poll" << std::endl;
+
 	}
 
 	std::cout << "--- All Socket tests passed successfully! ---" << std::endl;

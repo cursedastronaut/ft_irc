@@ -5,6 +5,8 @@
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <unistd.h>
+namespace irc 
+{
 
 class ScopedSocket {
 	private:
@@ -42,5 +44,7 @@ class ScopedSocket {
 		void	reset(int new_fd = -1);
 		void	swap(ScopedSocket &other);
 };
+
+}	//	namespace irc
 
 #endif //	SCOPEDSOCKET_HPP

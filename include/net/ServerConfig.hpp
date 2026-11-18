@@ -18,9 +18,13 @@
 # include <map>
 
 # include "settings.hpp"
+# include "contracts/Protocol.hpp"
 # include "net/parsers.hpp"
 # include "net/ScopedSocket.hpp"
 # include "net/ClientRecord.hpp"
+
+namespace irc
+{
 
 class ServerConfig
 {
@@ -35,15 +39,17 @@ private:
 	irc::ClientId							_next_client_id;
 	bool									_id_exhausted;
 	irc::ClientId							_last_accpted_id;
-	std::map<irc::ClientId, ClientRecord>	_clients_by_id;
+	std::map<irc::ClientId, netClientRecord>	_clients_by_id;
 	std::map<int, irc::ClientId>			_fd_to_client_id;
+	protocol								*_protocol;
+	size_t									_line_budget;
 
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
 	
 	public:
 	//	Constructor
-	ServerConfig(int irc_port, std::string psw);
+	ServerConfig(int irc_port, std::string psw, protocol *prtoto = NULL);
 	ServerConfig(const ServerConfig &src);
 	
 	//	Destructor
@@ -92,18 +98,28 @@ private:
 	int									getPort() const;
 	size_t								getClientNb() const;
 	int									getListenFd() const;
-	bool								isListening() const;
-	bool								isListenerReady() const;
 	const std::vector<struct pollfd>	&getPollFds() const;
 	const std::vector<int>				&getClientFds() const;
-	irc::ClientId						getLastAcceptedClientId() const;
-	irc::ClientId						getClientIdByFd(int fd) const;
-	const ClientRecord					*getClientById(irc::ClientId id) const;
-	ClientRecord						*getClientById(irc::ClientId id);
-	const ClientRecord					*getClientByFd(int fd) const;
+	ClientId							getLastAcceptedClientId() const;
+	ClientId							getClientIdByFd(int fd) const;
+	const netClientRecord				*getClientById(ClientId id) const;
+	netClientRecord						*getClientById(ClientId id);
+	const netClientRecord				*getClientByFd(int fd) const;
+	protocol							*getProtocol() const;
+	std::string							getClientDisconnectReason(ClientId id) const;
+	size_t								getLineBudget() const;
+	int									getEffectivePollTimeout(int default_timout_ms) const;
+	bool								isListening() const;
+	bool								isListenerReady() const;
 	bool								isIdExhausted() const;
+	bool								isClientReadable(ClientId id) const;
+	bool								isFdReadable(int fd) const;
+	bool								isClientMarkedForCleanup(ClientId id) const;
+	bool								hasClientCompleteLine(ClientId id) const;
+	bool								hasPendingCompleteLines() const;
 	
 	//	Seter
+	void		setProtocol(protocol *proto);
 	void		createListenerSocket(int domain = AF_INET);
 	void		configureListenerSocket();
 	void		bindListenerSocket(in_addr_t bind_addr = INADDR_ANY);
@@ -116,11 +132,24 @@ private:
 	bool		removeClientById(irc::ClientId id);
 	bool		removeClientByFd(int fd);
 	void		setNextClientId(irc::ClientId next_id);
+	ssize_t		readReadyClient(ClientId id);
+	ssize_t		readReadyClientByFd(int fd);
+	size_t		readAllReadyClients();
+	void		markClientForCleanup(ClientId id, const std::string &reason); 
+	ssize_t		handleRecvResult(ClientId id, const char *buf, ssize_t n);
+	ssize_t		injectRecvResult(ClientId id, ssize_t simulated_ret);
+	size_t		cleanupMarkedClients();
+	void		setLineBudget(size_t budget);
+	bool		extractNextClientLine(ClientId id, std::string &out_line);
+	size_t		dispatchClientLines(ClientId id);
+	size_t		dispatchAllReadyLines();
 
 	//	Debug
 	std::string	getPSW() const;		//	Debug Use Only (Display raw _psw !!!)
 };
 
 std::ostream	&operator<<(std::ostream &os, const ServerConfig &src);
+
+}	//	namespace irc
 
 #endif	// SERVERCONFIG_HPP

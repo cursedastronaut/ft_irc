@@ -4,14 +4,21 @@
 # include <iostream>
 # include "contracts/ClientId.hpp"
 
-struct ClientRecord {
+namespace irc 
+{
+
+struct netClientRecord {
 	irc::ClientId	id;
 	int				fd;
 	std::string		in_buf;
 	std::string		out_buf;
+	bool			marked_for_cleanup;
+	std::string		disconnect_reason;
 
-	ClientRecord();
-	ClientRecord(irc::ClientId client_id, int client_fd);
+	netClientRecord();
+	netClientRecord(irc::ClientId client_id, int client_fd);
 };
+
+}	//	namespace irc
 
 #endif //	CLIENTRECORD_HPP

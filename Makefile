@@ -70,6 +70,12 @@ $(TEST_NET):
 	rm -f test_socket_config.d
 	@./test_socket_config
 	@rm -f test_socket_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_recv_result.cpp -o test_recv_result ; \
+	rm -f test_recv_result.d
+	@./test_recv_result
+	@rm -f test_recv_result
 
 #$(TEST_AUTH):
 
@@ -91,6 +97,12 @@ $(TEST_NET_MEM):
 	rm -f test_socket_config.d
 	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_socket_config
 	@rm -f test_socket_config
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_recv_result.cpp -o test_recv_result ; \
+	rm -f test_recv_result.d
+	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_recv_result
+	@rm -f test_recv_result
 
 #$(TEST_AUT_MEM):
 

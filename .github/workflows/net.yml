@@ -41,6 +41,13 @@ jobs:
           $CXX $CXXFLAGS $SRC_FILE tests/net/test_socket_config.cpp -o test_socket_config
           ./test_socket_config
           rm -f test_socket_config
+      - name: Build and run focused recv result test
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: |
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_recv_result.cpp -o test_recv_result
+          ./test_recv_result
+          rm -f test_recv_result
   sanitizers:
     name: Valgrind & Sanitizers (NET)
     runs-on: ubuntu-24.04
@@ -64,3 +71,10 @@ jobs:
           $CXX $CXXFLAGS $SRC_FILE tests/net/test_socket_config.cpp -o test_socket_config
           valgrind --leak-check=full --track-fds=yes --error-exitcode=1 ./test_socket_config
           rm -f test_socket_config
+      - name: Check memory leaks (recv result)
+        env:
+          CXX: clang++
+        run: |
+          $CXX $CXXFLAGS $SRC_FILE tests/net/test_recv_result.cpp -o test_recv_result
+          valgrind --leak-check=full --track-fds=yes --error-exitcode=1 ./test_recv_result
+          rm -f test_recv_result

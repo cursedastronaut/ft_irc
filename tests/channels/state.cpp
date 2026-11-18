@@ -4,7 +4,7 @@
 
 static void defaultsAndSecretsAreIndependent()
 {
-    const ServerConfig server(6667, "fixture-server-secret");
+    const irc::ServerConfig server(6667, "fixture-server-secret");
     irc::ChannelRegistry registry;
     irc::Channel *alpha = registry.create("#alpha").first;
     irc::Channel *beta = registry.create("#beta").first;
