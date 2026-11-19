@@ -1,13 +1,13 @@
 NAME		= ircserv
 
 TEST_NET	= net_test
-#TEST_AUTH	= auth_test
+TEST_PROTO	= proto_test
 TEST_CHAN	= chan_test
 
 TEST_ALL	= all_tests
 
 TEST_NET_MEM= net_mem_test
-#TEST_AUT_MEM= auth_mem_test
+TEST_PROTO_MEM= proto_mem_test
 TEST_CHA_MEM= chan_mem_test
 
 TEST_MEMORY	= all_mem_tests
@@ -22,7 +22,12 @@ FILES		= main.cpp\
 			net/ClientRecord.cpp\
 			net/parsers.cpp\
 			net/ScopedSocket.cpp\
-			net/ServerConfig.cpp
+			net/ServerConfig.cpp\
+			protocol/Parser.cpp\
+			protocol/ClientRegistry.cpp\
+			protocol/Reply.cpp\
+			protocol/Dispatcher.cpp\
+			protocol/DispatchProtocol.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))
@@ -77,7 +82,8 @@ $(TEST_NET):
 	@./test_recv_result
 	@rm -f test_recv_result
 
-#$(TEST_AUTH):
+$(TEST_AUTH):
+	@python3 tests/protocol/run.py
 
 
 $(TEST_CHAN):
@@ -104,7 +110,8 @@ $(TEST_NET_MEM):
 	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_recv_result
 	@rm -f test_recv_result
 
-#$(TEST_AUT_MEM):
+$(TEST_PROTO_MEM):
+	@python3 tests/protocol/run.py --sanitizers
 
 
 $(TEST_CHA_MEM):
@@ -114,6 +121,8 @@ $(TEST_MEMORY):
 	@echo "<<<<<    MEMORY TEST    >>>>>"
 # 	NET MEMORY TESTS
 	@make --no-print-directory $(TEST_NET_MEM)
+#	PROTOCOL MEMORY TESTS
+	@make --no-print-directory $(TEST_PROTO_MEM)
 # 	CHANNELS MEMORY TESTS
 	@make --no-print-directory $(TEST_CHA_MEM)
 
