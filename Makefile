@@ -7,7 +7,7 @@ TEST_CHAN	= chan_test
 TEST_ALL	= all_tests
 
 TEST_NET_MEM= net_mem_test
-#TEST_AUT_MEM= auth_mem_test
+TEST_PROTO_MEM= proto_mem_test
 TEST_CHA_MEM= chan_mem_test
 
 TEST_MEMORY	= all_mem_tests
