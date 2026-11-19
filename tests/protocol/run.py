@@ -16,6 +16,7 @@ SUITES = {
 	"client_registry": ["src/protocol/ClientRegistry.cpp"],
 	"reply": ["src/protocol/Reply.cpp"],
 	"reply_fixtures": ["src/protocol/Reply.cpp"],
+	"dispatcher": ["src/protocol/Dispatcher.cpp"],
 }
 
 

@@ -15,6 +15,7 @@ SUITES = {
 	"protocol_contract": [],
 	"channel_contract": ["tests/contracts/fixtures/identity_stub.cpp",
 	                     "tests/contracts/fixtures/channel_stub.cpp"],
+	"casemapping_contract": [],
 }
 
 
