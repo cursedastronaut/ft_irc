@@ -82,7 +82,8 @@ $(TEST_NET):
 	@./test_recv_result
 	@rm -f test_recv_result
 
-#$(TEST_AUTH):
+$(TEST_AUTH):
+	@python3 tests/protocol/run.py
 
 
 $(TEST_CHAN):
