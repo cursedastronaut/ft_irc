@@ -157,6 +157,37 @@ void emptyLineIsIgnoredNotAnError()
 	CHECK(result == irc::ParseIgnore);
 }
 
+void forgedPrefixClaimingAnotherUsersIdentityDoesNotChangeOutput()
+{
+	irc::ParsedCommand withPrefix;
+	irc::ParsedCommand withoutPrefix;
+
+	irc::ParseResult resultWithPrefix =
+		irc::parseCommand(":victim PRIVMSG #chan :hello", withPrefix);
+	irc::ParseResult resultWithoutPrefix =
+		irc::parseCommand("PRIVMSG #chan :hello", withoutPrefix);
+
+	CHECK(resultWithPrefix == irc::ParseSuccess);
+	CHECK(resultWithoutPrefix == irc::ParseSuccess);
+	CHECK(withPrefix.command == withoutPrefix.command);
+	CHECK(withPrefix.params.size() == withoutPrefix.params.size());
+	CHECK(withPrefix.params[0] == withoutPrefix.params[0]);
+	CHECK(withPrefix.params[1] == withoutPrefix.params[1]);
+}
+
+void fullNickUserHostForgedPrefixIsSkippedTheSameWay()
+{
+	irc::ParsedCommand out;
+	irc::ParseResult result =
+		irc::parseCommand(":admin!root@attacker.invalid PRIVMSG #chan :hi", out);
+
+	CHECK(result == irc::ParseSuccess);
+	CHECK(out.command == "PRIVMSG");
+	CHECK(out.params.size() == 2);
+	CHECK(out.params[0] == "#chan");
+	CHECK(out.params[1] == "hi");
+}
+
 void lineWithOnlySpacesIsAnError()
 {
 	irc::ParsedCommand out;
@@ -206,6 +237,10 @@ int main()
 						  paramLimitOfFifteenIsEnforced);
 	failures += runTests("emptyLineIsIgnoredNotAnError",
 						  emptyLineIsIgnoredNotAnError);
+	failures += runTests("forgedPrefixClaimingAnotherUsersIdentityDoesNotChangeOutput",
+						  forgedPrefixClaimingAnotherUsersIdentityDoesNotChangeOutput);
+	failures += runTests("fullNickUserHostForgedPrefixIsSkippedTheSameWay",
+						  fullNickUserHostForgedPrefixIsSkippedTheSameWay);
 	failures += runTests("lineWithOnlySpacesIsAnError",
 						  lineWithOnlySpacesIsAnError);
 	failures += runTests("prefixWithoutCommandAfterIsAnError",
