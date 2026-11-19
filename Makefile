@@ -109,7 +109,8 @@ $(TEST_NET_MEM):
 	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_recv_result
 	@rm -f test_recv_result
 
-#$(TEST_AUT_MEM):
+$(TEST_PROTO_MEM):
+	@python3 tests/protocol/run.py --sanitizers
 
 
 $(TEST_CHA_MEM):
