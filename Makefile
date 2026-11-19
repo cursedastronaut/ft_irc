@@ -22,7 +22,12 @@ FILES		= main.cpp\
 			net/ClientRecord.cpp\
 			net/parsers.cpp\
 			net/ScopedSocket.cpp\
-			net/ServerConfig.cpp
+			net/ServerConfig.cpp\
+			protocol/Parser.cpp\
+			protocol/ClientRegistry.cpp\
+			protocol/Reply.cpp\
+			protocol/Dispatcher.cpp\
+			protocol/DispatchProtocol.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))

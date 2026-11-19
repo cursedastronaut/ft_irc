@@ -1,4 +1,6 @@
 #include "net/ServerConfig.hpp"
+#include "protocol/Dispatcher.hpp"
+#include "protocol/DispatchProtocol.hpp"
 
 int	main(int ac, char **av) {
 	if (ac != 3){
@@ -11,6 +13,10 @@ int	main(int ac, char **av) {
 		int				port = irc::port_parser(av[1]);
 		std::string		psw = irc::psw_parser(av[2]);
 		irc::ServerConfig	serv(port, psw);
+
+		irc::Dispatcher dispatcher;
+		irc::DispatchProtocol adaptater(dispatcher);
+		serv.setProtocol(&adaptater);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;
