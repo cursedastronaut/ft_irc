@@ -1,7 +1,7 @@
 NAME		= ircserv
 
 TEST_NET	= net_test
-#TEST_AUTH	= auth_test
+TEST_PROTO	= proto_test
 TEST_CHAN	= chan_test
 
 TEST_ALL	= all_tests
