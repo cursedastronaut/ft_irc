@@ -14,8 +14,9 @@ int	main(int ac, char **av) {
 		std::string		psw = irc::psw_parser(av[2]);
 		irc::ServerConfig	serv(port, psw);
 
+		irc::ClientRegistry registry;
 		irc::Dispatcher dispatcher;
-		irc::DispatchProtocol adaptater(dispatcher);
+		irc::DispatchProtocol adaptater(dispatcher, registry);
 		serv.setProtocol(&adaptater);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);

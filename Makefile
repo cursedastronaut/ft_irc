@@ -27,7 +27,8 @@ FILES		= main.cpp\
 			protocol/ClientRegistry.cpp\
 			protocol/Reply.cpp\
 			protocol/Dispatcher.cpp\
-			protocol/DispatchProtocol.cpp
+			protocol/DispatchProtocol.cpp\
+			protocol/Guards.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))

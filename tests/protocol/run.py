@@ -18,7 +18,8 @@ SUITES = {
 	"reply_fixtures": ["src/protocol/Reply.cpp"],
 	"dispatcher": ["src/protocol/Dispatcher.cpp"],
 	"dispatch_protocol": ["src/protocol/Parser.cpp", "src/protocol/Dispatcher.cpp",
-						   "src/protocol/DispatchProtocol.cpp"],
+						   "src/protocol/DispatchProtocol.cpp",
+						   "src/protocol/ClientRegistry.cpp", "src/protocol/Guards.cpp"],
 }
 
 
