@@ -16,6 +16,7 @@ SUITES = {
 	"client_registry": ["src/protocol/ClientRegistry.cpp"],
 	"reply": ["src/protocol/Reply.cpp"],
 	"dispatcher": ["src/protocol/Dispatcher.cpp"],
+	"pong_handler": ["src/protocol/Dispatcher.cpp", "src/protocol/PongHandler.cpp"],
 }
 
 
