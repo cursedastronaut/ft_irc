@@ -24,8 +24,10 @@ int	main(int ac, char **av) {
 					(void)client_fd;
 				}
 				serv.readAllReadyClients();
+				serv.writeAllReadyClients();
 			}
 			serv.dispatchAllReadyLines();
+			serv.markErroredClientsForCleanup();
 			serv.cleanupMarkedClients();
 		}
 		
