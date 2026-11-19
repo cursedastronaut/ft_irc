@@ -120,6 +120,8 @@ $(TEST_MEMORY):
 	@echo "<<<<<    MEMORY TEST    >>>>>"
 # 	NET MEMORY TESTS
 	@make --no-print-directory $(TEST_NET_MEM)
+#	PROTOCOL MEMORY TESTS
+	@make --no-print-directory $(TEST_PROTO_MEM)
 # 	CHANNELS MEMORY TESTS
 	@make --no-print-directory $(TEST_CHA_MEM)
 
