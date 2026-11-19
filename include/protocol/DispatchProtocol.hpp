@@ -14,6 +14,7 @@
 # define IRC_PROTOCOL_DISPATCH_PROTOCOL_HPP
 
 # include "protocol/Dispatcher.hpp"
+# include "protocol/ClientRegistry.hpp"
 # include "contracts/Protocol.hpp"
 
 namespace irc
@@ -21,14 +22,15 @@ namespace irc
 	class DispatchProtocol : public ::protocol
 	{
 		public:
-			explicit	DispatchProtocol(Dispatcher &dispatcher);
+			DispatchProtocol(Dispatcher &dispatcher, ClientRegistry &registry);
 
 			void	connected(ClientId id);
 			void	online(ClientId id, const std::string &line);
 			void	disconnected(ClientId id, const std::string &reason);
 
 		private:
-			Dispatcher	&_dispatcher;
+			Dispatcher		&_dispatcher;
+			ClientRegistry	&_registry;
 	};
 }
 
