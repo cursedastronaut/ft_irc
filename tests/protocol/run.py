@@ -15,6 +15,7 @@ SUITES = {
 	"parser": ["src/protocol/Parser.cpp"],
 	"client_registry": ["src/protocol/ClientRegistry.cpp"],
 	"reply": ["src/protocol/Reply.cpp"],
+	"reply_fixtures": ["src/protocol/Reply.cpp"],
 	"dispatcher": ["src/protocol/Dispatcher.cpp"],
 	"dispatch_protocol": ["src/protocol/Parser.cpp", "src/protocol/Dispatcher.cpp",
 						   "src/protocol/DispatchProtocol.cpp"],
