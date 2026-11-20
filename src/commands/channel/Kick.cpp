@@ -27,5 +27,13 @@ void Kick::execute(ClientId actor, const ClientIdentity &identity, const Paramet
         numeric(actor, identity, 441, fields, "They aren't on that channel");
         return;
     }
+
+    fields.push_back(targetIdentity.nickname);
+    std::string event;
+    if (buildEventLine(identity, "KICK", fields, params.size() > 2 ? params[2] : identity.nickname, event) != ReplySuccess)
+        return;
+    broadcast(*channel, event);
+    channel->removeMember(target);
+    context.registry.eraseEmpty(params[0]);
 }
 }

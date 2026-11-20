@@ -16,6 +16,14 @@ static void verify()
     h.send(1001, "KICK #room Carol");
     CHECK(h.wire.lines[1001].back().find("441 Alice Carol #Room") != std::string::npos);
     CHECK(room.members.size() == 2 && room.isOperator(1001));
+
+    h.send(1001, "KICK #room bOB :a reason");
+    CHECK(!room.containsMember(1002));
+    CHECK(h.wire.lines[1002].back() == ":Alice!user@localhost KICK #Room Bob :a reason");
+    CHECK(h.wire.lines[1001].back() == h.wire.lines[1002].back());
+    h.send(1001, "KICK #room Alice");
+    CHECK(!h.registry.find("#room"));
+    CHECK(h.wire.lines[1001].back() == ":Alice!user@localhost KICK #Room Alice :Alice");
 }
 
 int main() { return runTests("Kick", verify); }
