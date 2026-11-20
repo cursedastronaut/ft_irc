@@ -65,67 +65,50 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 -include $(DEPS)
 
 $(TEST_NET):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_config.cpp -o test_config ; rm -f test_config.d
-	@./test_config
-	@rm -f test_config
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_socket_config.cpp -o test_socket_config ; \
-	rm -f test_socket_config.d
-	@./test_socket_config
-	@rm -f test_socket_config
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_recv_result.cpp -o test_recv_result ; \
-	rm -f test_recv_result.d
-	@./test_recv_result
-	@rm -f test_recv_result
+	@echo "<<<<<    NORMAL TEST    >>>>>"
+	@echo "<<<<<<<<<    NET    >>>>>>>>>"
+	@python3 tests/net/run.py && echo "<<<<<<   NET PASS    >>>>>>>>" || echo "<<<<<<   NET FAIL   >>>>>>>>"
 
 $(TEST_AUTH):
-	@python3 tests/protocol/run.py
-
+	@echo "<<<<<    NORMAL TEST    >>>>>"
+	@echo "<<<<<<    PROTOCOL    >>>>>>>"
+	@python3 tests/protocol/run.py && echo "<<<<    PROTOCOL PASS    >>>>" || echo "<<<<    PROTOCOL FAIL    >>>>"
 
 $(TEST_CHAN):
-	@python3 tests/channels/run.py
+	@echo "<<<<<    NORMAL TEST    >>>>>"
+	@echo "<<<<<<    CHANNELS    >>>>>>>"
+	@python3 tests/channels/run.py && echo "<<<<    CHANNELS PASS   >>>>>" || echo "<<<<    CHANNELS  FAIL   >>>>>"
 
 $(TEST_ALL): $(TEST_NET) $(TEST_CHAN)
 
+
 $(TEST_NET_MEM):
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_config.cpp -o test_config ; rm -f test_config.d
-	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1 ./test_config 
-	@rm -f test_config
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_socket_config.cpp -o test_socket_config ; \
-	rm -f test_socket_config.d
-	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_socket_config
-	@rm -f test_socket_config
-	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
-	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
-	tests/net/test_recv_result.cpp -o test_recv_result ; \
-	rm -f test_recv_result.d
-	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_recv_result
-	@rm -f test_recv_result
+	@echo "<<<<<    MEMORY TEST    >>>>>"
+	@echo "<<<<<<<<<    NET    >>>>>>>>>"
+	@python3 tests/net/run.py --sanitizers \
+	&& echo "<<<<<   NET MEMM PASS   >>>>>" || echo "<<<<   NET MEMM FAIL    >>>>>>"
 
 $(TEST_PROTO_MEM):
-	@python3 tests/protocol/run.py --sanitizers
-
+	@echo "<<<<<    MEMORY TEST    >>>>>"
+	@echo "<<<<<<    PROTOCOL    >>>>>>>"
+	@python3 tests/protocol/run.py --sanitizers \
+	&& echo "<<    PROTOCOL MEMM PASS   >>" || echo "<<    PROTOCOL MEMM FAIL    >>"
 
 $(TEST_CHA_MEM):
-	@python3 tests/channels/run.py --sanitizers
+	@echo "<<<<<    MEMORY TEST    >>>>>"
+	@echo "<<<<<<    CHANNELS    >>>>>>>"
+	@python3 tests/channels/run.py --sanitizers \
+	&& echo "<<    CHANNELS MEMM PASS   >>" || echo "<<    CHANNELS MEMM FAIL   >>>"
 
 $(TEST_MEMORY):
-	@echo "<<<<<    MEMORY TEST    >>>>>"
 # 	NET MEMORY TESTS
+	@echo "<<<   ALL MEMORY TESTS    >>>"
 	@make --no-print-directory $(TEST_NET_MEM)
 #	PROTOCOL MEMORY TESTS
 	@make --no-print-directory $(TEST_PROTO_MEM)
 # 	CHANNELS MEMORY TESTS
 	@make --no-print-directory $(TEST_CHA_MEM)
+	@echo "<<  ALL MEMORY TESTS PASS  >>"
 
 clean:
 	@$(RM) $(OBJ_DIR)
