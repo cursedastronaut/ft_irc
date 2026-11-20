@@ -13,6 +13,7 @@ struct netClientRecord {
 	std::string		in_buf;
 	std::string		out_buf;
 	bool			marked_for_cleanup;
+	bool			disconnecting;
 	std::string		disconnect_reason;
 
 	netClientRecord();
