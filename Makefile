@@ -82,6 +82,12 @@ $(TEST_NET):
 	rm -f test_recv_result.d
 	@./test_recv_result
 	@rm -f test_recv_result
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_net_output.cpp -o test_net_output ; \
+	rm -f test_net_output.d
+	@./test_net_output
+	@rm -f test_net_output
 
 $(TEST_AUTH):
 	@python3 tests/protocol/run.py
@@ -110,6 +116,12 @@ $(TEST_NET_MEM):
 	rm -f test_recv_result.d
 	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_recv_result
 	@rm -f test_recv_result
+	@clang++ $(CXXFLAGS) src/net/parsers.cpp src/net/ScopedSocket.cpp \
+	src/net/ClientRecord.cpp src/net/ServerConfig.cpp \
+	tests/net/test_net_output.cpp -o test_net_output ; \
+	rm -f test_net_output.d
+	@valgrind --leak-check=full --track-fds=yes --error-exitcode=1  ./test_net_output
+	@rm -f test_net_output
 
 $(TEST_PROTO_MEM):
 	@python3 tests/protocol/run.py --sanitizers
