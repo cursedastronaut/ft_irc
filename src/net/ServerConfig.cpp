@@ -1,7 +1,29 @@
 #include "net/ServerConfig.hpp"
 
+#ifdef MSG_NOSIGNAL
+# define IRC_SEND_FLAGS MSG_NOSIGNAL
+#else
+# define IRC_SEND_FLAGS 0
+#endif	//	MSG_NOSOGNAL
+
 namespace irc 
 {
+//Private
+void	ServerConfig::setClientWriteInterest_(int fd, bool enable) {
+	if (fd < 0)
+		return ;
+	for(size_t i = 1; i <_poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == fd) {
+			if (enable)
+				_poll_fds[i].events |= POLLOUT;
+			else
+				_poll_fds[i].events &= ~POLLOUT;
+			break;
+		}
+	}
+}
+
+//Public
 
 //	Constructor
 ServerConfig::ServerConfig(int irc_port, std::string psw,
@@ -11,7 +33,7 @@ ServerConfig::ServerConfig(int irc_port, std::string psw,
 		_next_client_id(1), _id_exhausted(false), _last_accpted_id(0),
 		_clients_by_id(), _fd_to_client_id(), _protocol(proto),
 		_channel_service(channel_service), _line_budget(DEFAULT_LINE_BUDGET) {
-
+  	ignoreSigpipe();
 }
 
 ServerConfig::ServerConfig(const ServerConfig &src)
@@ -21,12 +43,56 @@ ServerConfig::ServerConfig(const ServerConfig &src)
 		_last_accpted_id(src._last_accpted_id), _clients_by_id(src._clients_by_id),
 		_fd_to_client_id(src._fd_to_client_id), _protocol(src._protocol),
 		_channel_service(src._channel_service), _line_budget(src._line_budget) {
-
+  	ignoreSigpipe();
 }
 
 //	Destructor
 ServerConfig::~ServerConfig(){
 	closeListener();
+}
+
+//	Transport interface
+ClientIdentity	ServerConfig::returnIdentity(irc::ClientId id) const {
+	(void)id;
+	return(ClientIdentity());
+}
+
+void	ServerConfig::requestDisconnection(ClientId id, const std::string &reason, bool after_flush) {
+	netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->marked_for_cleanup)
+		return ;
+	if(!after_flush || !rec->hasPendingOutput()) {
+		rec->out_buf.clear();
+		rec->out_offset = 0;
+		rec->close_after_flush = false;
+		markClientForCleanup(id, reason);
+		return ;
+	}
+	rec->close_after_flush = true;
+	rec->disconnect_reason = reason;
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == rec->fd) {
+			_poll_fds[i].events &= ~POLLIN;
+			_poll_fds[i].revents &= ~POLLIN;
+			break ;
+		}
+	}
+}
+
+enqueueResult	ServerConfig::enqueueLine(ClientId id, const std::string &line) {
+	netClientRecord	*rec = getClientById(id);
+	if(rec == NULL || rec->fd < 0 || rec->marked_for_cleanup || rec->close_after_flush)
+		return (Rejected);
+	if(line.find('\r') != std::string::npos || line.find('\n') != std::string::npos)
+		return (Rejected);
+	if (!rec->hasPendingOutput()) {
+		rec->out_buf.clear();
+		rec->out_offset = 0;
+	}
+	rec->out_buf.append(line);
+	rec->out_buf.append("\r\n");
+	setClientWriteInterest_(rec->fd, true);
+	return (Queued);
 }
 
 //	Operator
@@ -159,10 +225,10 @@ ChannelService	*ServerConfig::getChannelService() const {
 	return (_channel_service);
 }
 
-int	ServerConfig::getEffectivePollTimeout(int defaault_timeout_ms) const {
+int	ServerConfig::getEffectivePollTimeout(int default_timeout_ms) const {
 	if (hasPendingCompleteLines())
 		return (0);
-	return (defaault_timeout_ms);
+	return (default_timeout_ms);
 }
 
 size_t	ServerConfig::getLineBudget() const {
@@ -174,6 +240,20 @@ std::string	ServerConfig::getClientDisconnectReason(ClientId id) const {
 	if (rec == NULL)
 		return ("");
 	return (rec->disconnect_reason);
+}
+
+size_t	ServerConfig::getClientPendingOutputSize(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL)
+		return (0);
+	return (rec->pendingOutputSize());
+}
+
+size_t	ServerConfig::getClientOutputOffset(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL)
+		return (0);
+	return (rec->out_offset);
 }
 
 bool	ServerConfig::isClientReadable(ClientId id) const {
@@ -194,11 +274,29 @@ bool	ServerConfig::isFdReadable(int fd) const {
 	return (isClientReadable(id));
 }
 
+bool	ServerConfig::isClientWriteInterestEnabled(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->fd < 0)
+		return (false);
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == rec->fd)
+			return ((_poll_fds[i].events & POLLOUT) != 0);
+	}
+	return (false);
+}
+
 bool	ServerConfig::isClientMarkedForCleanup(ClientId id) const {
 	const netClientRecord	*rec=getClientById(id);
 	if (rec == NULL)
 		return (false);
 	return(rec->marked_for_cleanup);
+}
+
+bool	ServerConfig::hasClientPendingOutput(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL)
+		return (false);
+	return (rec->hasPendingOutput());
 }
 
 bool	ServerConfig::hasClientCompleteLine(ClientId id) const {
@@ -219,6 +317,15 @@ bool	ServerConfig::hasPendingCompleteLines() const {
 }
 
 //	Seter
+void	ServerConfig::ignoreSigpipe() {
+	struct sigaction	sa;
+	std::memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	::sigaction(SIGPIPE, &sa, NULL);
+}
+
 void	ServerConfig::setProtocol(protocol *proto) {
 	_protocol = proto;
 }
@@ -270,6 +377,7 @@ void	ServerConfig::startListening(int backlog) {
 }
 
 void	ServerConfig::initListener(in_addr_t bind_addr, int backlog) {
+	ignoreSigpipe();
 	createListenerSocket(AF_INET);
 	configureListenerSocket();
 	bindListenerSocket(bind_addr);
@@ -285,6 +393,7 @@ void	ServerConfig::closeListener() {
 	_client_fds.clear();
 	_clients_by_id.clear();
 	_fd_to_client_id.clear();
+	_pending_removals.clear();
 	_poll_fds.clear();
 	_is_listening = false;
 	_listen_sock.reset();
@@ -295,6 +404,7 @@ void	ServerConfig::registerListenerInPoll_() {
 	if (!_listen_sock.isValid() || !_is_listening)
 		throw ServerConfig::PollException();
 	_poll_fds.clear();
+	_pending_removals.clear();
 	struct pollfd pfd;
 	pfd.fd = _listen_sock.get();
 	pfd.events = POLLIN;
@@ -417,12 +527,79 @@ size_t	ServerConfig::readAllReadyClients() {
 	return (read_cont);
 }
 
+ssize_t	ServerConfig::writeReadyClient(ClientId id) {
+	netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->fd < 0 || rec->marked_for_cleanup)
+		return (-1);
+	if (!rec->hasPendingOutput()) {
+		setClientWriteInterest_(rec->fd, false);
+		return (0);
+	}
+	size_t	poll_idx = 0;
+	bool	found_ready = false;
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == rec->fd) {
+			if ((_poll_fds[i].revents & POLLOUT) == 0)
+				return (-1);
+			poll_idx = i;
+			found_ready = true;
+			break ;
+		}
+	}
+	if (!found_ready)
+		return (-1);
+	_poll_fds[poll_idx].revents &= ~POLLOUT;
+	const char	*data_ptr = rec->out_buf.data() + rec->out_offset;
+	size_t		remaining = rec->out_buf.size() - rec->out_offset;
+	ssize_t		n = ::send(rec->fd, data_ptr, remaining, IRC_SEND_FLAGS);
+	return (handleSendResult(id, n));
+}
+
+ssize_t	ServerConfig::writeReadyClientByFd(int fd) {
+	ClientId	id = getClientIdByFd(fd);
+	if (id == 0)
+		return (-1);
+	return (writeReadyClient(id));
+}
+
+size_t	ServerConfig::writeAllReadyClients() {
+	size_t	write_count = 0;
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if ((_poll_fds[i].revents & POLLOUT) != 0) {
+			ClientId	id = getClientIdByFd(_poll_fds[i].fd);
+			if (id != 0 && writeReadyClient(id) > 0)
+				++write_count;
+		}
+	}
+	return (write_count);
+}
+
+size_t	ServerConfig::markErroredClientsForCleanup() {
+	size_t	marked = 0;
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		short	rev = _poll_fds[i].revents;
+		if ((rev & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+			ClientId	id = getClientIdByFd(_poll_fds[i].fd);
+			if (id != 0 && !isClientMarkedForCleanup(id)) {
+				markClientForCleanup(id, "Poll hangup or error");
+				++marked;
+			}
+			_poll_fds[i].revents = 0;
+		}
+	}
+	return (marked);
+}
+
+
 void	ServerConfig::markClientForCleanup(ClientId id, const std::string &reason) {
 	netClientRecord	*rec = getClientById(id);
 	if (rec == NULL || rec->marked_for_cleanup || rec->disconnecting)
 		return ;
-	rec->marked_for_cleanup = true;
-	rec->disconnect_reason = reason;
+	if (!rec->marked_for_cleanup) {
+		rec->marked_for_cleanup = true;
+		rec->disconnect_reason = reason;
+		_pending_removals.push_back(id);
+	}
 	for (size_t i = 1; i < _poll_fds.size(); ++i) {
 		if (_poll_fds[i].fd == rec->fd) {
 			_poll_fds[i].events = 0;
@@ -453,13 +630,41 @@ ssize_t	ServerConfig::injectRecvResult(ClientId id, ssize_t simulated_ret) {
 	return (handleRecvResult(id, NULL, simulated_ret));
 }
 
+ ssize_t	ServerConfig::handleSendResult(ClientId id, ssize_t n) {
+	netClientRecord	*rec = getClientById(id);
+	if (rec == NULL)
+		return (-1);
+	if (n > 0) {
+		size_t	sent = static_cast<size_t>(n);
+		size_t	remaining = rec->pendingOutputSize();
+		if (sent > remaining)
+			sent = remaining;
+		rec->out_offset += sent;
+		if (!rec->hasPendingOutput()) {
+			rec->out_buf.clear();
+			rec->out_offset = 0;
+			setClientWriteInterest_(rec->fd, false);
+			if (rec->close_after_flush)
+				markClientForCleanup(id, rec->disconnect_reason);
+		}
+		return (n);
+	}
+	markClientForCleanup(id, "Fatal write failure");
+	return (n);
+ }
+
+ssize_t	ServerConfig::injectSendResult(ClientId id, ssize_t simulated_ret) {
+	return (handleSendResult(id, simulated_ret));
+}
+
 size_t	ServerConfig::cleanupMarkedClients() {
 	size_t					cleaned = 0;
 	std::vector<ClientId>	to_rm;
+	to_rm.swap(_pending_removals);
 	for(std::map<ClientId, netClientRecord>::const_iterator it = _clients_by_id.begin();
 		it != _clients_by_id.end(); ++it)
 		{
-			if (it->second.marked_for_cleanup)
+			if (it->second.marked_for_cleanup && std::find(to_rm.begin(), to_rm.end(), it->first) == to_rm.end())
 				to_rm.push_back(it->first); 
 	}
 	for (size_t i = 0; i < to_rm.size(); ++i) {

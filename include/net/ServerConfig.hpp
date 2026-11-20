@@ -3,6 +3,7 @@
 
 # include <poll.h>
 # include <fcntl.h>
+# include <csignal>
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
@@ -27,7 +28,7 @@
 namespace irc
 {
 
-class ServerConfig
+class ServerConfig : public transport
 {
 private:
 	const int								_port;		//	Port connection
@@ -42,6 +43,7 @@ private:
 	irc::ClientId							_last_accpted_id;
 	std::map<irc::ClientId, netClientRecord>	_clients_by_id;
 	std::map<int, irc::ClientId>			_fd_to_client_id;
+  std::vector<ClientId>				_pending_removals;
 	protocol								*_protocol;
 	ChannelService							*_channel_service;
 	size_t									_line_budget;
@@ -49,6 +51,8 @@ private:
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
 	
+	void	setClientWriteInterest_(int fd, bool enable);
+
 	public:
 	//	Constructor
 	ServerConfig(int irc_port, std::string psw, protocol *prtoto = NULL, ChannelService *chan_s = NULL);
@@ -57,6 +61,11 @@ private:
 	//	Destructor
 	~ServerConfig();
 	
+	//	Transport interface
+	virtual	ClientIdentity	returnIdentity(ClientId id) const;
+	virtual void			requestDisconnection(ClientId id, const std::string &reason, bool afterFlush);
+	virtual enqueueResult	enqueueLine(ClientId id, const std::string &line);
+
 	//	Operator
 
 	//		++/--
@@ -112,16 +121,21 @@ private:
 	std::string							getClientDisconnectReason(ClientId id) const;
 	size_t								getLineBudget() const;
 	int									getEffectivePollTimeout(int default_timout_ms) const;
+	size_t								getClientPendingOutputSize(ClientId id) const;
+	size_t								getClientOutputOffset(ClientId id) const;
 	bool								isListening() const;
 	bool								isListenerReady() const;
 	bool								isIdExhausted() const;
 	bool								isClientReadable(ClientId id) const;
 	bool								isFdReadable(int fd) const;
 	bool								isClientMarkedForCleanup(ClientId id) const;
+	bool								isClientWriteInterestEnabled(ClientId id) const;
+	bool								hasClientPendingOutput(ClientId id) const;
 	bool								hasClientCompleteLine(ClientId id) const;
 	bool								hasPendingCompleteLines() const;
 	
 	//	Seter
+	static void	ignoreSigpipe();
 	void		setProtocol(protocol *proto);
 	void		createListenerSocket(int domain = AF_INET);
 	void		configureListenerSocket();
@@ -139,11 +153,17 @@ private:
 	ssize_t		readReadyClientByFd(int fd);
 	size_t		readAllReadyClients();
 	void		markClientForCleanup(ClientId id, const std::string &reason); 
+	size_t		markErroredClientsForCleanup();
 	ssize_t		handleRecvResult(ClientId id, const char *buf, ssize_t n);
 	ssize_t		injectRecvResult(ClientId id, ssize_t simulated_ret);
+	ssize_t		handleSendResult(ClientId id, ssize_t n);
+	ssize_t		injectSendResult(ClientId id, ssize_t simulated_red);
 	size_t		cleanupMarkedClients();
 	void		setLineBudget(size_t budget);
 	bool		extractNextClientLine(ClientId id, std::string &out_line);
+	ssize_t		writeReadyClient(ClientId id);
+	ssize_t		writeReadyClientByFd(int fd);
+	size_t		writeAllReadyClients();
 	size_t		dispatchClientLines(ClientId id);
 	size_t		dispatchAllReadyLines();
 	void		setChannelService(ChannelService *channel_service);
