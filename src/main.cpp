@@ -14,6 +14,11 @@ int	main(int ac, char **av) {
 		std::string		psw = irc::psw_parser(av[2]);
 		irc::ServerConfig	serv(port, psw);
 
+		if (!irc::ServerConfig::installShutdownSignals()) {
+			std::cerr << "Error: Failed to install shutdown signal handlers" << std::endl;
+			return (1);
+		}
+
 		irc::ClientRegistry registry;
 		irc::Dispatcher dispatcher;
 		irc::DispatchProtocol adaptater(dispatcher, registry);
@@ -22,9 +27,11 @@ int	main(int ac, char **av) {
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;
 
-		while (serv.isListening()) {
+		while (serv.isListening() && !irc::ServerConfig::isStopRequested()) {
 			int	timeout = serv.getEffectivePollTimeout(POLL_TIMEOUT_MS);
 			int ready = serv.waitForEvents(timeout);
+			if (irc::ServerConfig::isStopRequested())
+				break ;
 			if (ready > 0) {
 				if (serv.isListenerReady()) {
 					int	client_fd = serv.acceptReadyClient();
@@ -35,9 +42,10 @@ int	main(int ac, char **av) {
 			}
 			serv.dispatchAllReadyLines();
 			serv.markErroredClientsForCleanup();
+			serv.enforceFlushCloseBounds();
 			serv.cleanupMarkedClients();
 		}
-		
+		serv.closeListener();
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
