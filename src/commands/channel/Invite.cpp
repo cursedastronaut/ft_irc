@@ -20,6 +20,12 @@ void Invite::execute(ClientId actor, const ClientIdentity &identity, const Param
         numeric(actor, identity, 443, fields, "is already on channel");
         return;
     }
+
+    if (channel->modes.inviteOnly && !channel->isOperator(actor))
+    {
+        numeric(actor, identity, 482, Parameters(1, channel->displayName()), "You're not channel operator");
+        return;
+    }
     channel->addInvitation(target);
 }
 }

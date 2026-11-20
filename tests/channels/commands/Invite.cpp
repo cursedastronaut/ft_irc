@@ -16,6 +16,17 @@ static void verify()
     CHECK(room.invitations.empty());
     h.send(1002, "INVITE Carol #room");
     CHECK(room.hasInvitation(1003));
+
+    room.revokeInvitation(1003);
+    room.modes.inviteOnly = true;
+    irc::Channel &other = *h.registry.create("#other").first;
+    other.addMember(1002);
+    other.grantOperator(1002);
+    h.send(1002, "INVITE Carol #room");
+    CHECK(!room.hasInvitation(1003));
+    CHECK(h.wire.lines[1002].back().find("482 Bob #Room") != std::string::npos);
+    h.send(1001, "INVITE cARol #ROOM");
+    CHECK(room.hasInvitation(1003));
 }
 
 int main() { return runTests("Invite", verify); }
