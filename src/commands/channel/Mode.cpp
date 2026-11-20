@@ -1,4 +1,5 @@
 #include "commands/channel/Mode.hpp"
+#include <sstream>
 
 std::vector<irc::ModeStep> irc::planModeChanges(const Parameters &params)
 {
@@ -43,6 +44,31 @@ void Mode::execute(ClientId actor, const ClientIdentity &identity, const Paramet
     Channel *channel = memberChannel(actor, identity, params[0]);
     if (!channel)
         return;
+
+    if (params.size() == 1)
+    {
+        const ChannelModes &modes = channel->modes;
+        std::string flags = "+";
+        if (modes.inviteOnly) flags += 'i';
+        if (modes.topicRestricted) flags += 't';
+        if (modes.hasKey) flags += 'k';
+        if (modes.hasLimit) flags += 'l';
+        Parameters fields(1, channel->displayName());
+        fields.push_back(flags);
+        if (modes.hasKey)
+            fields.push_back(channel->isOperator(actor) ? modes.key : "*");
+        if (modes.hasLimit)
+        {
+            std::ostringstream limit;
+            limit << modes.limit;
+            fields.push_back(limit.str());
+        }
+        // Numeric 324 has only middle parameters, no human-readable trailer.
+        std::string line;
+        if (buildNumericReply(324, identity.nickname, fields, "", line) == ReplySuccess)
+            context.output.enqueueLine(actor, line.substr(0, line.size() - 2));
+        return;
+    }
 
     std::vector<ModeStep> plan = planModeChanges(params);
     for (size_t i = 0; i < plan.size(); ++i)

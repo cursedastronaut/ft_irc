@@ -19,6 +19,20 @@ static void verify()
     CHECK(h.wire.lines[1001][0].find("472 Alice x") != std::string::npos);
     CHECK(h.wire.lines[1001][1].find("461 Alice MODE") != std::string::npos);
     CHECK(!room.isOperator(1002));
+
+    h.send(1002, "MODE #room");
+    CHECK(h.wire.lines[1002].back() == ":ircserv 324 Bob #Room +");
+    room.modes.inviteOnly = room.modes.topicRestricted = room.modes.hasKey = room.modes.hasLimit = true;
+    room.modes.key = "secret";
+    room.modes.limit = 12;
+    h.send(1002, "MODE #ROOM");
+    CHECK(h.wire.lines[1002].back() == ":ircserv 324 Bob #Room +itkl * 12");
+    h.send(1001, "MODE #room");
+    CHECK(h.wire.lines[1001].back() == ":ircserv 324 Alice #Room +itkl secret 12");
+    h.send(1003, "MODE #room");
+    CHECK(h.wire.lines[1003].size() == 1);
+    CHECK(h.wire.lines[1003].back().find("442 Carol") != std::string::npos);
+    CHECK(h.wire.lines[1003].back().find("secret") == std::string::npos);
 }
 
 int main() { return runTests("Mode", verify); }
