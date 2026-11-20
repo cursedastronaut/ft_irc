@@ -14,5 +14,19 @@ void Topic::execute(ClientId actor, const ClientIdentity &identity, const Parame
         numeric(actor, identity, empty ? 331 : 332, fields, empty ? "No topic is set" : channel->topic);
         return;
     }
+
+    if (params[1].empty())
+        return;
+    if (channel->modes.topicRestricted && !channel->isOperator(actor))
+    {
+        numeric(actor, identity, 482, fields, "You're not channel operator");
+        return;
+    }
+    std::string event;
+    if (buildEventLine(identity, "TOPIC", fields, params[1], event) == ReplySuccess)
+    {
+        channel->topic = params[1];
+        broadcast(*channel, event);
+    }
 }
 }
