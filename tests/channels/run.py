@@ -28,6 +28,14 @@ SUITES = {
 				 "src/channels/ChannelRegistry.cpp"],
 }
 
+# Each command PR supplies a matching production source and focused fixture.
+for fixture in (ROOT / "tests/channels/commands").glob("*.cpp"):
+    suite = "commands/" + fixture.stem
+    SUITES[suite] = SUITES["registry"] + [
+        "src/commands/channel/ChannelCommand.cpp", "src/commands/channel/" + fixture.name,
+        "src/protocol/Dispatcher.cpp", "src/protocol/Parser.cpp", "src/protocol/Reply.cpp",
+    ]
+
 
 def main():
 	parser = argparse.ArgumentParser(description=__doc__)
@@ -52,7 +60,7 @@ def main():
 	try:
 		with tempfile.TemporaryDirectory(prefix="ft-irc-channels-") as temporary:
 			for suite in suites:
-				executable = Path(temporary) / suite
+				executable = Path(temporary) / Path(suite).name
 				sources = [str(ROOT / source) for source in SUITES[suite]]
 				sources.append(str(ROOT / "tests" / "channels" / (suite + ".cpp")))
 				print("BUILD " + suite + " (" + " ".join(compiler) + ")", flush=True)
