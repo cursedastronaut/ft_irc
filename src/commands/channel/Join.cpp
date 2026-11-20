@@ -34,5 +34,12 @@ void Join::execute(ClientId actor, const ClientIdentity &identity, const Paramet
             context.registry.eraseEmpty(params[0]);
         throw;
     }
+
+    std::string event;
+    if (buildEventLine(identity, "JOIN", Parameters(), channel->displayName(), event) == ReplySuccess)
+        broadcast(*channel, event);
+    bool empty = channel->topic.empty();
+    numeric(actor, identity, empty ? 331 : 332, Parameters(1, channel->displayName()),
+            empty ? "No topic is set" : channel->topic);
 }
 }
