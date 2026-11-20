@@ -19,6 +19,7 @@
 
 # include "settings.hpp"
 # include "contracts/Protocol.hpp"
+# include "contracts/ChannelService.hpp"
 # include "net/parsers.hpp"
 # include "net/ScopedSocket.hpp"
 # include "net/ClientRecord.hpp"
@@ -42,6 +43,7 @@ private:
 	std::map<irc::ClientId, netClientRecord>	_clients_by_id;
 	std::map<int, irc::ClientId>			_fd_to_client_id;
 	protocol								*_protocol;
+	ChannelService							*_channel_service;
 	size_t									_line_budget;
 
 	ServerConfig();				//	Can't creat an default ircserv
@@ -49,7 +51,7 @@ private:
 	
 	public:
 	//	Constructor
-	ServerConfig(int irc_port, std::string psw, protocol *prtoto = NULL);
+	ServerConfig(int irc_port, std::string psw, protocol *prtoto = NULL, ChannelService *chan_s = NULL);
 	ServerConfig(const ServerConfig &src);
 	
 	//	Destructor
@@ -106,6 +108,7 @@ private:
 	netClientRecord						*getClientById(ClientId id);
 	const netClientRecord				*getClientByFd(int fd) const;
 	protocol							*getProtocol() const;
+	ChannelService						*getChannelService() const;
 	std::string							getClientDisconnectReason(ClientId id) const;
 	size_t								getLineBudget() const;
 	int									getEffectivePollTimeout(int default_timout_ms) const;
@@ -143,6 +146,8 @@ private:
 	bool		extractNextClientLine(ClientId id, std::string &out_line);
 	size_t		dispatchClientLines(ClientId id);
 	size_t		dispatchAllReadyLines();
+	void		setChannelService(ChannelService *channel_service);
+	bool		disconnectClient(ClientId id, const std::string &reason = "");
 
 	//	Debug
 	std::string	getPSW() const;		//	Debug Use Only (Display raw _psw !!!)
