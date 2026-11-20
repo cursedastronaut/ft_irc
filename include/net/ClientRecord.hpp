@@ -1,6 +1,7 @@
 #ifndef CLIENTRECORD_HPP
 # define CLIENTRECORD_HPP
 
+# include <ctime>
 # include <iostream>
 # include "contracts/ClientId.hpp"
 
@@ -16,6 +17,7 @@ struct netClientRecord {
 	bool			marked_for_cleanup;
 	bool			close_after_flush;
 	std::string		disconnect_reason;
+	std::time_t		flush_started_at;
 
 	netClientRecord();
 	netClientRecord(irc::ClientId client_id, int client_fd);
@@ -23,6 +25,7 @@ struct netClientRecord {
 	bool		hasPendingOutput() const;
 	size_t		pendingOutputSize() const;
 	std::string	pendingOutput() const;
+	bool		isClosingAfterFlush() const;
 };
 
 }	//	namespace irc
