@@ -21,7 +21,7 @@ int	main(int ac, char **av) {
 
 		irc::ClientRegistry registry;
 		irc::Dispatcher dispatcher;
-		irc::DispatchProtocol adaptater(dispatcher, registry);
+		irc::DispatchProtocol adaptater(dispatcher, registry, serv);
 		serv.setProtocol(&adaptater);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);

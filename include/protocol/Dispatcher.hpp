@@ -15,6 +15,7 @@
 
 # include "contracts/ClientId.hpp"
 # include "contracts/Protocol.hpp"
+# include <cstddef>
 # include <map>
 # include <string>
 # include <vector>
@@ -32,18 +33,21 @@ namespace irc
 	enum DispatchResult
 	{
 		DispatchHandled = 0,
-		DispatchUnknownCommand = 1
+		DispatchUnknownCommand = 1,
+		DispatchNeedMoreParams = 2
 	};
 
 	class Dispatcher
 	{
 		public:
 			void			registerHandler(const std::string &command,
-							CommandHandler *handler);
+							CommandHandler *handler,
+							std::size_t minParams = 0);
 			DispatchResult	dispatch(ClientId actor,
 							const ParsedCommand &command) const;
 		private:
 			std::map<std::string, CommandHandler *>	_handlers;
+			std::map<std::string, std::size_t>		_minParams;
 	};
 }
 
