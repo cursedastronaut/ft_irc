@@ -21,11 +21,40 @@ class StubHandler : public irc::CommandHandler
 		std::vector<std::string> lastParams;
 };
 
+class RecordingTransport : public transport
+{
+	public:
+		ClientIdentity returnIdentity(irc::ClientId id) const
+		{
+			(void)id;
+			return ClientIdentity();
+		}
+
+		void requestDisconnection(irc::ClientId id, const std::string &reason,
+								   bool afterFlush)
+		{
+			(void)id;
+			(void)reason;
+			(void)afterFlush;
+		}
+
+		enqueueResult enqueueLine(irc::ClientId id, const std::string &line)
+		{
+			ids.push_back(id);
+			lines.push_back(line);
+			return Queued;
+		}
+
+		std::vector<irc::ClientId> ids;
+		std::vector<std::string> lines;
+};
+
 void connectedCreatesARegistryEntry()
 {
 	irc::Dispatcher dispatcher;
 	irc::ClientRegistry registry;
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 	irc::ClientRecord record;
 
 	CHECK(registry.find(1, record) == false);
@@ -37,7 +66,8 @@ void disconnectedRemovesTheRegistryEntry()
 {
 	irc::Dispatcher dispatcher;
 	irc::ClientRegistry registry;
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 	irc::ClientRecord record;
 
 	protocol.connected(1);
@@ -52,7 +82,8 @@ void aRegisteredCommandReachesItsHandlerWithCorrectActorAndParams()
 	irc::ClientRegistry registry;
 	StubHandler nick;
 	dispatcher.registerHandler("NICK", &nick);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.connected(42);
 	protocol.online(42, "NICK bob");
@@ -69,7 +100,8 @@ void anUnregisteredConnectedClientCannotReachARegularHandler()
 	irc::ClientRegistry registry;
 	StubHandler privmsg;
 	dispatcher.registerHandler("PRIVMSG", &privmsg);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.connected(1);
 	protocol.online(1, "PRIVMSG bob :hi");
@@ -83,7 +115,8 @@ void anUnregisteredConnectedClientCanStillReachNick()
 	irc::ClientRegistry registry;
 	StubHandler nick;
 	dispatcher.registerHandler("NICK", &nick);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.connected(1);
 	protocol.online(1, "NICK bob");
@@ -97,7 +130,8 @@ void anUnknownClientNeverConnectedCanStillReachPass()
 	irc::ClientRegistry registry;
 	StubHandler pass;
 	dispatcher.registerHandler("PASS", &pass);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.online(1, "PASS secret");
 
@@ -110,7 +144,8 @@ void anUnknownClientNeverConnectedCannotReachARegularHandler()
 	irc::ClientRegistry registry;
 	StubHandler privmsg;
 	dispatcher.registerHandler("PRIVMSG", &privmsg);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.online(1, "PRIVMSG bob :hi");
 
@@ -123,7 +158,8 @@ void onlineOnAnEmptyLineIsIgnoredSilently()
 	irc::ClientRegistry registry;
 	StubHandler nick;
 	dispatcher.registerHandler("NICK", &nick);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.connected(1);
 	protocol.online(1, "");
@@ -137,12 +173,88 @@ void onlineOnAMalformedPrefixIsIgnoredSilently()
 	irc::ClientRegistry registry;
 	StubHandler nick;
 	dispatcher.registerHandler("NICK", &nick);
-	irc::DispatchProtocol protocol(dispatcher, registry);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
 
 	protocol.connected(1);
 	protocol.online(1, ":");
 
 	CHECK(nick.callCount == 0);
+}
+
+void aPreRegistrationCommandWithoutHandlerIsUnknown()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "NICK bob");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv 421 * NICK :Unknown command");
+}
+
+void anUnknownCommandProducesOneReplyAndTheNextCommandStillWorks()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler nick;
+	dispatcher.registerHandler("NICK", &nick, 1);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setNickname(1, "bob");
+	protocol.online(1, "USER bob 0 * :Bob");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.ids[0] == 1UL);
+	CHECK(net.lines[0] == ":ircserv 421 bob USER :Unknown command");
+
+	protocol.online(1, "NICK alice");
+
+	CHECK(nick.callCount == 1);
+	CHECK(net.lines.size() == 1U);
+}
+
+void missingParametersReplyWithoutReachingTheHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler nick;
+	dispatcher.registerHandler("NICK", &nick, 1);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "NICK");
+
+	CHECK(nick.callCount == 0);
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv 461 * NICK :Not enough parameters");
+
+	protocol.online(1, "NICK bob");
+
+	CHECK(nick.callCount == 1);
+	CHECK(net.lines.size() == 1U);
+}
+
+void aHandledCommandSendsNoDispatcherError()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler pass;
+	dispatcher.registerHandler("PASS", &pass, 1);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "PASS secret");
+
+	CHECK(pass.callCount == 1);
+	CHECK(net.lines.empty());
 }
 
 }
@@ -169,6 +281,14 @@ int main()
 						  onlineOnAnEmptyLineIsIgnoredSilently);
 	failures += runTests("onlineOnAMalformedPrefixIsIgnoredSilently",
 						  onlineOnAMalformedPrefixIsIgnoredSilently);
+	failures += runTests("aPreRegistrationCommandWithoutHandlerIsUnknown",
+						  aPreRegistrationCommandWithoutHandlerIsUnknown);
+	failures += runTests("anUnknownCommandProducesOneReplyAndTheNextCommandStillWorks",
+						  anUnknownCommandProducesOneReplyAndTheNextCommandStillWorks);
+	failures += runTests("missingParametersReplyWithoutReachingTheHandler",
+						  missingParametersReplyWithoutReachingTheHandler);
+	failures += runTests("aHandledCommandSendsNoDispatcherError",
+						  aHandledCommandSendsNoDispatcherError);
 
 	return failures;
 }

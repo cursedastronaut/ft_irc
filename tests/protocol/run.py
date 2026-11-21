@@ -19,7 +19,8 @@ SUITES = {
 	"dispatcher": ["src/protocol/Dispatcher.cpp"],
 	"dispatch_protocol": ["src/protocol/Parser.cpp", "src/protocol/Dispatcher.cpp",
 						   "src/protocol/DispatchProtocol.cpp",
-						   "src/protocol/ClientRegistry.cpp", "src/protocol/Guards.cpp"],
+						   "src/protocol/ClientRegistry.cpp", "src/protocol/Guards.cpp",
+						   "src/protocol/Reply.cpp"],
 }
 
 
