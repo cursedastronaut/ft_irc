@@ -15,6 +15,7 @@ struct netClientRecord {
 	std::string		out_buf;
 	size_t			out_offset;
 	bool			marked_for_cleanup;
+	bool			disconnecting;
 	bool			close_after_flush;
 	std::string		disconnect_reason;
 	std::time_t		flush_started_at;

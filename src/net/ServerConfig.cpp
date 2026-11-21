@@ -38,12 +38,14 @@ void	ServerConfig::setClientWriteInterest_(int fd, bool enable) {
 //Public
 
 //	Constructor
-ServerConfig::ServerConfig(int irc_port, std::string psw, protocol *proto)
+ServerConfig::ServerConfig(int irc_port, std::string psw,
+		protocol *proto, ChannelService *channel_service)
 	: _port(irc_port), _psw(psw), _client_nb(0), _listen_sock(),
 		_is_listening(false), _poll_fds(), _client_fds(),
 		_next_client_id(1), _id_exhausted(false), _last_accpted_id(0),
 		_clients_by_id(), _fd_to_client_id(), _protocol(proto),
-		_line_budget(DEFAULT_LINE_BUDGET), _flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC) {
+		_channel_service(channel_service), _line_budget(DEFAULT_LINE_BUDGET),
+		_flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC) {
 	ignoreSigpipe();
 }
 
@@ -53,7 +55,8 @@ ServerConfig::ServerConfig(const ServerConfig &src)
 		_next_client_id(src._next_client_id), _id_exhausted(src._id_exhausted),
 		_last_accpted_id(src._last_accpted_id), _clients_by_id(src._clients_by_id),
 		_fd_to_client_id(src._fd_to_client_id), _protocol(src._protocol),
-		_line_budget(src._line_budget), _flush_timeout_sec(src._flush_timeout_sec) {
+		_channel_service(src._channel_service), _line_budget(src._line_budget),
+		_flush_timeout_sec(src._flush_timeout_sec) {
 	ignoreSigpipe();
 }
 
@@ -236,6 +239,10 @@ bool	ServerConfig::isIdExhausted() const {
 
 protocol	*ServerConfig::getProtocol() const{
 	return (_protocol);
+}
+
+ChannelService	*ServerConfig::getChannelService() const {
+	return (_channel_service);
 }
 
 int	ServerConfig::getEffectivePollTimeout(int default_timeout_ms) const {
@@ -574,33 +581,14 @@ int	ServerConfig::acceptReadyClient() {
 }
 
 bool	ServerConfig::removeClientById(ClientId id) {
-	std::map<ClientId, netClientRecord>::iterator it = _clients_by_id.find(id);
-	if (it == _clients_by_id.end())
-		return (false);
-	int fd = it->second.fd;
-	_fd_to_client_id.erase(fd);
-	_clients_by_id.erase(it);
-	std::vector<int>::iterator vec_it = std::find(_client_fds.begin(), _client_fds.end(), fd);
-	if (vec_it != _client_fds.end())
-		_client_fds.erase(vec_it);
-	for (size_t i = 1; i < _poll_fds.size(); ++i) {
-		if (_poll_fds[i].fd == fd) {
-			_poll_fds.erase(_poll_fds.begin() + i);
-			break;
-		}
-	}
-	if (fd >= 0)
-		::close(fd);
-	if (_client_nb > 0)
-		--_client_nb;
-	return (true);
+	return (disconnectClient(id, ""));
 }
 
 bool	ServerConfig::removeClientByFd(int fd) {
 	irc::ClientId id = getClientIdByFd(fd);
 	if (id == 0)
 		return (false);
-	return (removeClientById(id));
+	return (disconnectClient(id, ""));
 }
 
 void	ServerConfig::setNextClientId(irc::ClientId next_id) {
@@ -722,7 +710,7 @@ size_t	ServerConfig::markErroredClientsForCleanup() {
 
 void	ServerConfig::markClientForCleanup(ClientId id, const std::string &reason) {
 	netClientRecord	*rec = getClientById(id);
-	if (rec == NULL)
+	if (rec == NULL || rec->marked_for_cleanup || rec->disconnecting)
 		return ;
 	if (!rec->marked_for_cleanup) {
 		rec->marked_for_cleanup = true;
@@ -797,7 +785,7 @@ size_t	ServerConfig::cleanupMarkedClients() {
 				to_rm.push_back(it->first); 
 	}
 	for (size_t i = 0; i < to_rm.size(); ++i) {
-		if (removeClientById(to_rm[i]))
+		if (disconnectClient(to_rm[i], ""))
 			++cleaned;
 	}
 	return (cleaned);
@@ -847,6 +835,61 @@ size_t	ServerConfig::dispatchAllReadyLines() {
 			total_dispached += dispatchClientLines(id); 
 	}
 	return (total_dispached);
+}
+
+void	ServerConfig::setChannelService(ChannelService *chan_s) {
+	_channel_service = chan_s;
+}
+
+bool	ServerConfig::disconnectClient(ClientId id, const std::string &reason) {
+	std::map<ClientId, netClientRecord>::iterator it = _clients_by_id.find(id);
+	if (it == _clients_by_id.end() || it->second.disconnecting)
+		return (false);
+	it->second.disconnecting = true;
+	it->second.marked_for_cleanup = true;
+	if (it->second.disconnect_reason.empty() && !reason.empty())
+		it->second.disconnect_reason = reason;
+	const std::string	final_reason = it->second.disconnect_reason;
+	const int			fd = it->second.fd;
+	if (fd >= 0) {
+		for (size_t i = 1; i < _poll_fds.size(); i++) {
+			if (_poll_fds[i].fd == fd) {
+				_poll_fds[i].events = 0;
+				_poll_fds[i].revents = 0;
+				break;
+			}
+		}
+	}
+
+	if (_protocol != NULL)
+		_protocol->disconnected(id, final_reason);
+	if (_channel_service != NULL)
+		_channel_service->removeClient(id);
+	
+	it = _clients_by_id.find(id);
+	if (it != _clients_by_id.end()) {
+		it->second.in_buf.clear();
+		it->second.out_buf.clear();
+		it->second.disconnect_reason.clear();
+		_clients_by_id.erase(it);
+	}
+
+	if (fd >= 0) {
+		_fd_to_client_id.erase(fd);
+		std::vector<int>::iterator vec_it = std::find(_client_fds.begin(), _client_fds.end(), fd);
+		if (vec_it != _client_fds.end())
+			_client_fds.erase(vec_it);
+		for (size_t i = 1; i < _poll_fds.size(); ++i) {
+			if (_poll_fds[i].fd == fd) {
+				_poll_fds.erase(_poll_fds.begin() + i);
+				break;
+			}
+		}
+		::close(fd);
+	}
+	if (_client_nb > 0)
+		--_client_nb;
+	return(true);
 }
 
 //	Other

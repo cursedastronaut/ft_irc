@@ -1,101 +1,142 @@
-#include <iostream>
-#include <cassert>
-#include <cstring>
+#include "Test.hpp"
 #include "net/ServerConfig.hpp"
 
-static void assert_invalid_port(const char *input, const char *label) {
-	try {
+#include <cstddef>
+#include <string>
+
+namespace
+{
+
+void checkInvalidPort(const char *input)
+{
+	bool rejected = false;
+	try
+	{
 		irc::port_parser(input);
-		std::cerr << "[FAIL] Port wrongly accepted (" << label << ")" << std::endl;
-		assert(false);
-	} catch (const std::exception &e) {
-		std::cout << "[OK] Rejected port (" << label << ") -> " << e.what() << std::endl;
 	}
+	catch (const std::exception &)
+	{
+		rejected = true;
+	}
+	CHECK(rejected);
 }
 
-int main() {
+static void portParserAcceptsBoundsAndRejectsInvalidInputs()
+{
+	CHECK(irc::port_parser("1") == 1);
+	CHECK(irc::port_parser("65535") == 65535);
+	CHECK(irc::port_parser("6667") == 6667);
 
-	std::cout << "---ServerConfig Test--- (Net-06 & Net-07)" << std::endl;
-	// 1. NET-06 Tests: Port validation
-	assert(irc::port_parser("1") == 1);
-	assert(irc::port_parser("65535") == 65535);
-	assert(irc::port_parser("6667") == 6667);
-	std::cout << "[OK] Valid ports (1, 6667, 65535)" << std::endl;
+	const char *invalid[] = {
+		"0",
+		"65536",
+		"-1",
+		"+6667",
+		"9999999999999999999999999999",
+		"2147483648",
+		"6667a",
+		"",
+		0
+	};
+	const std::size_t count = sizeof(invalid) / sizeof(invalid[0]);
+	for (std::size_t i = 0; i < count; ++i)
+		checkInvalidPort(invalid[i]);
+}
 
-	assert_invalid_port("0", "lower bound 0");
-	assert_invalid_port("65536", "upper bound 65536");
-	assert_invalid_port("-1", "negative -1");
-	assert_invalid_port("+6667", "plus sign +");
-	assert_invalid_port("9999999999999999999999999999", "long overflow");
-	assert_invalid_port("2147483648", "INT_MAX + 1");
-	assert_invalid_port("6667a", "trailing letters");
-	assert_invalid_port("", "empty string");
-	assert_invalid_port(NULL, "NULL pointer");
-
-	// 2. NET-07 Tests: Password and ServerConfig construction
-	try {
+static void passwordAndServerConfigCopyPreserveRawSecret()
+{
+	bool empty_rejected = false;
+	try
+	{
 		irc::psw_parser("");
-		assert(false);
-	} catch (const std::exception &e) {
-		std::cout << "[OK] Empty password rejected -> " << e.what() << std::endl;
 	}
+	catch (const std::exception &)
+	{
+		empty_rejected = true;
+	}
+	CHECK(empty_rejected);
+
+	bool null_rejected = false;
+	try
+	{
+		irc::psw_parser(0);
+	}
+	catch (const std::exception &)
+	{
+		null_rejected = true;
+	}
+	CHECK(null_rejected);
 
 	const std::string raw_secret = irc::psw_parser("s3cr3t!\t_bytes");
 	irc::ServerConfig serv(irc::port_parser("6667"), raw_secret);
-	assert(serv.getPort() == 6667);
-	assert(serv.getPSW() == raw_secret);
-	assert(serv.getClientNb() == 0);
+	CHECK(serv.getPort() == 6667);
+	CHECK(serv.getPSW() == raw_secret);
+	CHECK(serv.getClientNb() == 0);
 
 	irc::ServerConfig copy_serv(serv);
-	assert(copy_serv.getPort() == 6667);
-	assert(copy_serv.getPSW() == raw_secret);
-	assert(copy_serv.getClientNb() == 0);
-	std::cout << "[OK] ServerConfig stores and copies configuration properly" << std::endl;
+	CHECK(copy_serv.getPort() == 6667);
+	CHECK(copy_serv.getPSW() == raw_secret);
+	CHECK(copy_serv.getClientNb() == 0);
+}
 
-	// 3. Increment / Decrement Tests (++ / --) and Bounds (0 .. MAX_CLIENT)
-	// Underflow test at 0
-	try {
+static void clientCounterEnforcesBoundsAndPrefixPostfixSemantics()
+{
+	irc::ServerConfig serv(6667, "fixture-secret");
+
+	bool underflow = false;
+	try
+	{
 		--serv;
-		assert(false);
-	} catch (const irc::ServerConfig::ClientUnderFlow &e) {
-		std::cout << "[OK] ClientUnderFlow on --serv at 0 -> " << e.what() << std::endl;
 	}
+	catch (const irc::ServerConfig::ClientUnderFlow &)
+	{
+		underflow = true;
+	}
+	CHECK(underflow);
 
-	// Pre-increment test (++serv): must equal 1 immediately
 	irc::ServerConfig &ref_inc = ++serv;
-	assert(&ref_inc == &serv);
-	assert(serv.getClientNb() == 1);
+	CHECK(&ref_inc == &serv);
+	CHECK(serv.getClientNb() == 1);
 
-	// Post-increment test (serv++): copy returns 1, serv becomes 2
 	irc::ServerConfig old_inc = serv++;
-	assert(old_inc.getClientNb() == 1);
-	assert(serv.getClientNb() == 2);
+	CHECK(old_inc.getClientNb() == 1);
+	CHECK(serv.getClientNb() == 2);
 
-	// Post-decrement test (serv--): copy returns 2, serv becomes 1
 	irc::ServerConfig old_dec = serv--;
-	assert(old_dec.getClientNb() == 2);
-	assert(serv.getClientNb() == 1);
+	CHECK(old_dec.getClientNb() == 2);
+	CHECK(serv.getClientNb() == 1);
 
-	// Pre-decrement test (--serv): returns to 0 immediately
 	irc::ServerConfig &ref_dec = --serv;
-	assert(&ref_dec == &serv);
-	assert(serv.getClientNb() == 0);
-	std::cout << "[OK] Prefix (++serv, --serv) and postfix (serv++, serv--) behavior verified" << std::endl;
+	CHECK(&ref_dec == &serv);
+	CHECK(serv.getClientNb() == 0);
 
-	// Fill up to MAX_CLIENT
-	for (size_t i = 0; i < MAX_CLIENT; i++) {
+	for (std::size_t i = 0; i < MAX_CLIENT; ++i)
 		++serv;
-	}
-	assert(serv.getClientNb() == MAX_CLIENT);
+	CHECK(serv.getClientNb() == MAX_CLIENT);
 
-	// Overflow test beyond MAX_CLIENT
-	try {
+	bool overflow = false;
+	try
+	{
 		serv++;
-		assert(false);
-	} catch (const irc::ServerConfig::ClientOutOfRange &e) {
-		std::cout << "[OK] ClientOutOfRange at MAX_CLIENT (" << MAX_CLIENT << ") -> " << e.what() << std::endl;
 	}
-	assert(serv.getClientNb() == MAX_CLIENT);
-	std::cout << "--- All ServerConfig tests passed successfully! ---" << std::endl;
-	return (0);
+	catch (const irc::ServerConfig::ClientOutOfRange &)
+	{
+		overflow = true;
+	}
+	CHECK(overflow);
+	CHECK(serv.getClientNb() == MAX_CLIENT);
+}
+
+static void configTests()
+{
+	portParserAcceptsBoundsAndRejectsInvalidInputs();
+	passwordAndServerConfigCopyPreserveRawSecret();
+	clientCounterEnforcesBoundsAndPrefixPostfixSemantics();
+}
+
+} // namespace
+
+int main()
+{
+	return runTests("NET-06..07 config and parsers", configTests);
 }
