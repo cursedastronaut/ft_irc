@@ -17,6 +17,7 @@
 # include <cstring>
 # include <vector>
 # include <map>
+# include <ctime>
 
 # include "settings.hpp"
 # include "contracts/Protocol.hpp"
@@ -43,10 +44,11 @@ private:
 	irc::ClientId							_last_accpted_id;
 	std::map<irc::ClientId, netClientRecord>	_clients_by_id;
 	std::map<int, irc::ClientId>			_fd_to_client_id;
-  std::vector<ClientId>				_pending_removals;
+	std::vector<ClientId>					_pending_removals;
 	protocol								*_protocol;
 	ChannelService							*_channel_service;
 	size_t									_line_budget;
+	std::time_t								_flush_timeout_sec;
 
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
@@ -123,6 +125,7 @@ private:
 	int									getEffectivePollTimeout(int default_timout_ms) const;
 	size_t								getClientPendingOutputSize(ClientId id) const;
 	size_t								getClientOutputOffset(ClientId id) const;
+	std::time_t							getFlushTimeoutSec() const;
 	bool								isListening() const;
 	bool								isListenerReady() const;
 	bool								isIdExhausted() const;
@@ -130,12 +133,20 @@ private:
 	bool								isFdReadable(int fd) const;
 	bool								isClientMarkedForCleanup(ClientId id) const;
 	bool								isClientWriteInterestEnabled(ClientId id) const;
+	bool								isClientClosingAfterFlush(ClientId id) const;
+	static bool							isStopRequested();
 	bool								hasClientPendingOutput(ClientId id) const;
 	bool								hasClientCompleteLine(ClientId id) const;
 	bool								hasPendingCompleteLines() const;
+	bool								hasClosingClients() const;
 	
 	//	Seter
 	static void	ignoreSigpipe();
+	static bool	installShutdownSignals();
+	static void	resetStopFlag();
+	void		setFlushTimeoutSec(std::time_t timeout_sec);
+	size_t		enforceFlushCloseBounds();
+	size_t		enforceFlushCloseBounds(std::time_t now);
 	void		setProtocol(protocol *proto);
 	void		createListenerSocket(int domain = AF_INET);
 	void		configureListenerSocket();
