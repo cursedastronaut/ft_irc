@@ -49,11 +49,13 @@ private:
 	ChannelService							*_channel_service;
 	size_t									_line_budget;
 	std::time_t								_flush_timeout_sec;
+	bool									_shutting_down;
 
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
 	
 	void	setClientWriteInterest_(int fd, bool enable);
+	void	stopAdmission_();
 
 	public:
 	//	Constructor
@@ -135,6 +137,7 @@ private:
 	bool								isClientWriteInterestEnabled(ClientId id) const;
 	bool								isClientClosingAfterFlush(ClientId id) const;
 	static bool							isStopRequested();
+	bool								isShuttingDown() const;
 	bool								hasClientPendingOutput(ClientId id) const;
 	bool								hasClientCompleteLine(ClientId id) const;
 	bool								hasPendingCompleteLines() const;
@@ -179,6 +182,7 @@ private:
 	size_t		dispatchAllReadyLines();
 	void		setChannelService(ChannelService *channel_service);
 	bool		disconnectClient(ClientId id, const std::string &reason = "");
+	void		shutdown(const std::string &reason = "Server shutdown");
 
 	//	Debug
 	std::string	getPSW() const;		//	Debug Use Only (Display raw _psw !!!)
