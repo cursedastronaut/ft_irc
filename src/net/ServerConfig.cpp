@@ -904,4 +904,9 @@ std::string ServerConfig::getPSW() const {
 	return (_psw);
 }
 
+//	PasswordSource (PROTO-15)
+const std::string	&ServerConfig::getPassword() const {
+	return (_psw);
+}
+
 }	//	namespace irc

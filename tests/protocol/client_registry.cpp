@@ -177,6 +177,41 @@ void canRegisterIsTrueWhenAllThreeFlagsAreSet()
 	CHECK(record.canRegister() == true);
 }
 
+void setPasswordAcceptedThenFindReflectsIt()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.passwordAccepted == true);
+}
+
+void settingPasswordAcceptedToFalseAfterTrueOverwritesIt()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setPasswordAccepted(1, false);
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.passwordAccepted == false);
+}
+
+void setPasswordAcceptedOnAnUncreatedClientDoesNotInsertAFakeClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.setPasswordAccepted(999, true);
+
+	CHECK(registry.find(999, out) == false);
+}
+
 void setNicknameThenLookupFindsTheSameClient()
 {
 	irc::ClientRegistry registry;
@@ -288,6 +323,12 @@ int main()
 						  canRegisterIsFalseWithMissingUser);
 	failures += runTests("canRegisterIsTrueWhenAllThreeFlagsAreSet",
 						  canRegisterIsTrueWhenAllThreeFlagsAreSet);
+	failures += runTests("setPasswordAcceptedThenFindReflectsIt",
+						  setPasswordAcceptedThenFindReflectsIt);
+	failures += runTests("settingPasswordAcceptedToFalseAfterTrueOverwritesIt",
+						  settingPasswordAcceptedToFalseAfterTrueOverwritesIt);
+	failures += runTests("setPasswordAcceptedOnAnUncreatedClientDoesNotInsertAFakeClient",
+						  setPasswordAcceptedOnAnUncreatedClientDoesNotInsertAFakeClient);
 	failures += runTests("setNicknameThenLookupFindsTheSameClient",
 						  setNicknameThenLookupFindsTheSameClient);
 	failures += runTests("lookupOnUnknownNicknameFailsWithoutTouchingOut",

@@ -37,6 +37,7 @@ namespace irc
 			bool	find(ClientId id, ClientRecord &out) const;
 			void	remove(ClientId id);
 			void	setNickname(ClientId id, const std::string &nickname);
+			void	setPasswordAccepted(ClientId id, bool accepted);
 			bool	clientIdForNickname(const std::string &nickname, ClientId &out) const;
 
 		private:
