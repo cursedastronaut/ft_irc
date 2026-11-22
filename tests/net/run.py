@@ -13,15 +13,20 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 NET_CORE_SRCS = [
 	"src/net/ClientRecord.cpp",
+	"src/net/parsers.cpp",
+	"src/net/ScopedShutdownGuard.cpp",
 	"src/net/ScopedSocket.cpp",
 	"src/net/ServerConfig.cpp",
-	"src/net/parsers.cpp",
 ]
 SUITES = {
 	"config": NET_CORE_SRCS,
-	"socket": NET_CORE_SRCS,
-	"read_lines": NET_CORE_SRCS,
 	"disconnect_order": NET_CORE_SRCS,
+	"flush_before_close": NET_CORE_SRCS,
+	"net_output": NET_CORE_SRCS,
+	"read_lines": NET_CORE_SRCS,
+	"shutdown_signals": NET_CORE_SRCS,
+	"shutdown": NET_CORE_SRCS,
+	"socket": NET_CORE_SRCS,
 }
 
 
