@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientRegistry.hpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/11 19:45:32 by nehuen           ###   ########.fr       */
+/*   Updated: 2026/11/23 16:31:17 by nd-angel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ namespace irc
 		bool		passwordAccepted;
 		bool		nicknameSet;
 		bool		userSet;
+		bool		registered;
 
 		bool	canRegister() const;
 	};
@@ -39,6 +40,9 @@ namespace irc
 			void	setNickname(ClientId id, const std::string &nickname);
 			void	setPasswordAccepted(ClientId id, bool accepted);
 			bool	clientIdForNickname(const std::string &nickname, ClientId &out) const;
+			void	setRegistered(ClientId id);
+			// numeric reply target: current nickname, or "*" before NICK
+			std::string	recipientFor(ClientId id) const;
 
 		private:
 			std::map<ClientId, ClientRecord>	_byID;
