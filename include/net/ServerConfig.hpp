@@ -51,12 +51,17 @@ private:
 	size_t									_line_budget;
 	std::time_t								_flush_timeout_sec;
 	bool									_shutting_down;
+	size_t									_max_input_line_bytes;
+	size_t									_max_input_buffer_bytes;
+	size_t									_max_output_buffer_bytes;
 
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
 	
 	void	setClientWriteInterest_(int fd, bool enable);
 	void	stopAdmission_();
+	bool	validateIncomingInput_(const std::string &existing, const char *buf,
+									size_t len, std::string &reject_reason);
 
 	public:
 	//	Constructor
@@ -129,6 +134,9 @@ private:
 	size_t								getClientPendingOutputSize(ClientId id) const;
 	size_t								getClientOutputOffset(ClientId id) const;
 	std::time_t							getFlushTimeoutSec() const;
+	size_t								getMaxInputLineBytes() const;
+	size_t								getMaxInputBufferBytes() const;
+	size_t								getMaxOutputBufferBytes() const;
 	bool								isListening() const;
 	bool								isListenerReady() const;
 	bool								isIdExhausted() const;
@@ -184,6 +192,9 @@ private:
 	void		setChannelService(ChannelService *channel_service);
 	bool		disconnectClient(ClientId id, const std::string &reason = "");
 	void		shutdown(const std::string &reason = "Server shutdown");
+	void		setMaxInputLineBytes(size_t max_bytes);
+	void		setMaxInputBufferBytes(size_t max_bytes);
+	void		setMaxOutputBufferBytes(size_t max_bytes);
 
 	//	Debug
 	std::string	getPSW() const;		//	Debug Use Only (Display raw _psw !!!)

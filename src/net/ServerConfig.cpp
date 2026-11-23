@@ -46,6 +46,40 @@ void	ServerConfig::stopAdmission_() {
 	}
 }
 
+bool	ServerConfig::validateIncomingInput_(const std::string &existing,
+					const char *buf, size_t len, std::string &reject_reason) {
+	size_t max_buf = (_max_input_buffer_bytes < _max_input_line_bytes)
+						? _max_input_line_bytes : _max_input_buffer_bytes;
+	if (len > max_buf || existing.size() > max_buf - len) {
+		reject_reason = "Input buffer limit exceeded";
+		return (false);
+	}
+	size_t line_len = 0;
+	for (size_t i = 0; i < existing.size(); ++i) {
+		++line_len;
+		if (line_len > _max_input_line_bytes) {
+			reject_reason = "Input line exceeds maximum length";
+			return (false);
+		}
+		if (existing[i] == '\n')
+			line_len = 0;
+	}
+	for (size_t i = 0; i < len; ++i) {
+		++line_len;
+		if (line_len > _max_input_line_bytes) {
+			reject_reason = "Input line exceeds maximum length";
+			return (false);
+		}
+		if (buf[i] == '\n')
+			line_len = 0;
+	}
+	if (line_len >= _max_input_line_bytes) {
+		reject_reason = "Unterminated input exceeds maximum line length";
+		return (false);
+	}
+	return (true);
+}
+
 //Public
 
 //	Constructor
@@ -56,7 +90,10 @@ ServerConfig::ServerConfig(int irc_port, std::string psw,
 		_next_client_id(1), _id_exhausted(false), _last_accpted_id(0),
 		_clients_by_id(), _fd_to_client_id(), _protocol(proto),
 		_channel_service(channel_service), _line_budget(DEFAULT_LINE_BUDGET),
-		_flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC), _shutting_down(false) {
+		_flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC), _shutting_down(false),
+		_max_input_line_bytes(DEFAULT_MAX_INPUT_LINE_BYTES),
+		_max_input_buffer_bytes(DEFAULT_MAX_INPUT_BUFFER_BYTES),
+		_max_output_buffer_bytes(DEFAULT_MAX_OUTPUT_BUFFER_BYTES) {
 	ignoreSigpipe();
 }
 
@@ -67,7 +104,10 @@ ServerConfig::ServerConfig(const ServerConfig &src)
 		_last_accpted_id(src._last_accpted_id), _clients_by_id(src._clients_by_id),
 		_fd_to_client_id(src._fd_to_client_id), _protocol(src._protocol),
 		_channel_service(src._channel_service), _line_budget(src._line_budget),
-		_flush_timeout_sec(src._flush_timeout_sec), _shutting_down(false) {
+		_flush_timeout_sec(src._flush_timeout_sec), _shutting_down(false),
+		_max_input_line_bytes(src._max_input_line_bytes),
+		_max_input_buffer_bytes(src._max_input_buffer_bytes),
+		_max_output_buffer_bytes(src._max_output_buffer_bytes)  {
 	ignoreSigpipe();
 }
 
@@ -124,8 +164,24 @@ enqueueResult	ServerConfig::enqueueLine(ClientId id, const std::string &line) {
 		return (Rejected);
 	if(line.find('\r') != std::string::npos || line.find('\n') != std::string::npos)
 		return (Rejected);
+	const size_t pending = rec->pendingOutputSize();
+	if (line.size() > _max_output_buffer_bytes
+				|| (_max_output_buffer_bytes - line.size()) < 2
+				|| pending > (_max_output_buffer_bytes - (line.size() + 2))) {
+		rec->in_buf.clear();
+		rec->out_buf.clear();
+		rec->out_offset = 0;
+		rec->close_after_flush = false;
+		rec->flush_started_at = 0;
+		markClientForCleanup(id, "Ouput buffer limit exceeded");
+		return (Rejected);
+	}
 	if (!rec->hasPendingOutput()) {
 		rec->out_buf.clear();
+		rec->out_offset = 0;
+	}
+	else if (rec->out_offset >= _max_output_buffer_bytes){
+		rec->out_buf.erase(0 , rec->out_offset);
 		rec->out_offset = 0;
 	}
 	rec->out_buf.append(line);
@@ -303,11 +359,17 @@ std::time_t	ServerConfig::getFlushTimeoutSec() const {
 	return (_flush_timeout_sec);
 }
 
-void	ServerConfig::setFlushTimeoutSec(std::time_t timeout_sec) {
-	_flush_timeout_sec = (timeout_sec < 0) ? 0 : timeout_sec;
+size_t	ServerConfig::getMaxInputLineBytes() const {
+	return (_max_input_line_bytes);
 }
 
+size_t	ServerConfig::getMaxInputBufferBytes() const {
+	return (_max_input_buffer_bytes);
+}
 
+size_t	ServerConfig::getMaxOutputBufferBytes() const {
+	return (_max_output_buffer_bytes);
+}
 
 bool	ServerConfig::isClientReadable(ClientId id) const {
 	const netClientRecord	*rec = getClientById(id);
@@ -763,8 +825,18 @@ ssize_t	ServerConfig::handleRecvResult(ClientId id, const char *buf, ssize_t n) 
 	if (rec == NULL || rec->close_after_flush)
 		return (-1);
 	if (n > 0){
-		if (buf != NULL)
-			rec->in_buf.append(buf, static_cast<size_t>(n));
+		if (rec->marked_for_cleanup)
+			return (-1);
+		if (buf != NULL) {
+			std::string	reject_reason;
+			if (!validateIncomingInput_(rec->in_buf, buf,
+						static_cast<size_t>(n), reject_reason)) {
+				rec->in_buf.clear();
+				markClientForCleanup(id, reject_reason);
+				return (-1);
+			}
+			rec->in_buf.append(buf, static_cast<size_t>(n));		
+		}
 		return (n);
 	}
 	if (n == 0) {
@@ -836,8 +908,18 @@ bool	ServerConfig::extractNextClientLine(ClientId id, std::string &out_line) {
 	if(rec == NULL || rec->marked_for_cleanup || rec->close_after_flush)
 		return (false);
 	std::string::size_type	lf_pos = rec->in_buf.find('\n');
-	if (lf_pos == std::string::npos)
+	if (lf_pos == std::string::npos) {
+		if (rec->in_buf.size() >= _max_input_line_bytes) {
+			rec->in_buf.clear();
+			markClientForCleanup(id, "Input line exceeds maximum length");
+		}
 		return (false);
+	}
+	if (lf_pos + 1 > _max_input_line_bytes) {
+		rec->in_buf.clear();
+		markClientForCleanup(id,"Input line exceeds maximum length");
+		return (false);
+	}
 	std::string::size_type	content_len = lf_pos;
 	if (content_len > 0 && rec->in_buf[content_len - 1] == '\r')
 		--content_len;	
@@ -884,6 +966,26 @@ size_t	ServerConfig::dispatchAllReadyLines() {
 void	ServerConfig::setChannelService(ChannelService *chan_s) {
 	_channel_service = chan_s;
 }
+
+void	ServerConfig::setFlushTimeoutSec(std::time_t timeout_sec) {
+	_flush_timeout_sec = (timeout_sec < 0) ? 0 : timeout_sec;
+}
+
+void	ServerConfig::setMaxInputLineBytes(size_t max_bytes) {
+	_max_input_line_bytes = (max_bytes == 0) ? 1 :max_bytes;
+	if (_max_input_buffer_bytes < _max_input_line_bytes)
+		_max_input_buffer_bytes = _max_input_line_bytes;
+}
+
+void	ServerConfig::setMaxInputBufferBytes(size_t max_bytes) {
+	_max_input_buffer_bytes = (max_bytes < _max_input_line_bytes)
+								? _max_input_line_bytes : max_bytes; 
+}
+
+void	ServerConfig::setMaxOutputBufferBytes(size_t max_bytes) {
+	_max_output_buffer_bytes = (max_bytes == 0) ? 1 : max_bytes;
+}
+
 
 bool	ServerConfig::disconnectClient(ClientId id, const std::string &reason) {
 	std::map<ClientId, netClientRecord>::iterator it = _clients_by_id.find(id);
