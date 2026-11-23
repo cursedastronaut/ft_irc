@@ -1,6 +1,7 @@
 #include "net/ServerConfig.hpp"
 #include "protocol/Dispatcher.hpp"
 #include "protocol/DispatchProtocol.hpp"
+#include "commands/auth/PassHandler.hpp"
 
 int	main(int ac, char **av) {
 	if (ac != 3){
@@ -22,6 +23,9 @@ int	main(int ac, char **av) {
 		irc::Dispatcher			dispatcher;
 		irc::DispatchProtocol	adaptater(dispatcher, registry);
 		irc::ServerConfig		serv(port, psw, &adaptater);
+    
+		irc::PassHandler passHandler(registry, serv);
+		dispatcher.registerHandler("PASS", &passHandler, 1);
 		
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;

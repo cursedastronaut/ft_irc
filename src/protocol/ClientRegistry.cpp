@@ -6,7 +6,7 @@
 /*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/11 19:46:51 by nehuen           ###   ########.fr       */
+/*   Updated: 2026/11/22 21:57:09 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,17 @@ namespace irc
 		_byNickname[irc::canonicalizeIrcName(nickname)] = id;
 	}
 
-	bool ClientRegistry::clientIdForNickname(const std::string &nickname, ClientId &out) const
+	void ClientRegistry::setPasswordAccepted(ClientId id, bool accepted)
+	{
+		// TODO PROTO-15: même pattern que setNickname (find, bail si absent,
+		if (_byID.find(id) == _byID.end())
+			return ;
+		_byID[id].passwordAccepted = accepted;
+	}	
+	
+
+	bool ClientRegistry::clientIdForNickname(const std::string &nickname, ClientId &out) const	
+	
 	{
 		std::map<std::string, ClientId>::const_iterator it = _byNickname.find(irc::canonicalizeIrcName(nickname));
 		

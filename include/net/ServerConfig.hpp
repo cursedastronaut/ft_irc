@@ -25,11 +25,12 @@
 # include "net/parsers.hpp"
 # include "net/ScopedSocket.hpp"
 # include "net/ClientRecord.hpp"
+# include "contracts/PasswordSource.hpp"
 
 namespace irc
 {
 
-class ServerConfig : public transport
+class ServerConfig : public transport, public ::PasswordSource
 {
 private:
 	const int								_port;		//	Port connection
@@ -186,6 +187,9 @@ private:
 
 	//	Debug
 	std::string	getPSW() const;		//	Debug Use Only (Display raw _psw !!!)
+
+	//	PasswordSource (PROTO-15)
+	const std::string	&getPassword() const;
 };
 
 std::ostream	&operator<<(std::ostream &os, const ServerConfig &src);
