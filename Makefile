@@ -1,16 +1,16 @@
-NAME		= ircserv
+NAME			= ircserv
 
-TEST_NET	= net_test
-TEST_PROTO	= proto_test
-TEST_CHAN	= chan_test
+TEST_NET		= net_test
+TEST_PROTO		= proto_test
+TEST_CHAN		= chan_test
 
-TEST_ALL	= all_tests
+TEST_ALL		= all_tests
 
-TEST_NET_MEM= net_mem_test
-TEST_PROTO_MEM= proto_mem_test
-TEST_CHA_MEM= chan_mem_test
+TEST_NET_MEM	= net_mem_test
+TEST_PROTO_MEM	= proto_mem_test
+TEST_CHA_MEM	= chan_mem_test
 
-TEST_MEMORY	= all_mem_tests
+TEST_MEMORY		= all_mem_tests
 
 CXX			= c++
 CXXFLAGS	= -O3 -Wall -Wextra -Werror -Iinclude -std=c++98 -MMD -MP
@@ -20,6 +20,7 @@ OBJ_DIR		= obj/
 SRC_DIR		= src/
 FILES		= main.cpp\
 			net/ClientRecord.cpp\
+			net/ScopedShutdownGuard.cpp\
 			net/parsers.cpp\
 			net/ScopedSocket.cpp\
 			net/ServerConfig.cpp\

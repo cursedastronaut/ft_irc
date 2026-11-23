@@ -20,7 +20,8 @@ SUITES = {
 	"invitations": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"state": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp",
 	          "src/channels/ChannelRegistry.cpp", "src/net/ServerConfig.cpp",
-	          "src/net/ScopedSocket.cpp", "src/net/ClientRecord.cpp"],
+	          "src/net/ScopedSocket.cpp", "src/net/ClientRecord.cpp",
+			  "src/net/ScopedShutdownGuard.cpp"],
 	"membership": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"model": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
 	"names": ["src/channels/Channel.cpp", "src/channels/ChannelName.cpp"],
@@ -34,6 +35,7 @@ for fixture in (ROOT / "tests/channels/commands").glob("*.cpp"):
     SUITES[suite] = SUITES["registry"] + [
         "src/commands/channel/ChannelCommand.cpp", "src/commands/channel/" + fixture.name,
         "src/protocol/Dispatcher.cpp", "src/protocol/Parser.cpp", "src/protocol/Reply.cpp",
+		"src/net/ScopedShutdownGuard.cpp",
     ]
 
 
