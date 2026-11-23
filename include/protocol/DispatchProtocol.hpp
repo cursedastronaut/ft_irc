@@ -22,15 +22,21 @@ namespace irc
 	class DispatchProtocol : public ::protocol
 	{
 		public:
-			DispatchProtocol(Dispatcher &dispatcher, ClientRegistry &registry);
+			DispatchProtocol(Dispatcher &dispatcher, ClientRegistry &registry,
+							transport &net);
 
 			void	connected(ClientId id);
 			void	online(ClientId id, const std::string &line);
 			void	disconnected(ClientId id, const std::string &reason);
 
 		private:
+			void	sendNumeric(ClientId id, int errorCode,
+					const std::string &clientPseudo,
+					const std::string &command, const std::string &errorMessage);
+
 			Dispatcher		&_dispatcher;
 			ClientRegistry	&_registry;
+			transport		&_transport;
 	};
 }
 

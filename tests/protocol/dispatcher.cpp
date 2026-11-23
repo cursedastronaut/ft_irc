@@ -94,6 +94,25 @@ void dispatchWithNoParamsForwardsAnEmptyVector()
 	CHECK(foo.lastParams.empty());
 }
 
+void dispatchRejectsMissingParametersWithoutCallingTheHandler()
+{
+	irc::Dispatcher dispatcher;
+	StubHandler foo;
+	dispatcher.registerHandler("FOO", &foo, 2);
+
+	irc::ParsedCommand command;
+	command.command = "FOO";
+	command.params.push_back("arg1");
+
+	CHECK(dispatcher.dispatch(1, command) == irc::DispatchNeedMoreParams);
+	CHECK(foo.callCount == 0);
+
+	command.params.push_back("arg2");
+
+	CHECK(dispatcher.dispatch(1, command) == irc::DispatchHandled);
+	CHECK(foo.callCount == 1);
+}
+
 }
 
 int main()
@@ -108,6 +127,8 @@ int main()
 						  dispatchOnUnknownCommandDoesNotCallAnyHandlerAndSignalsIt);
 	failures += runTests("dispatchWithNoParamsForwardsAnEmptyVector",
 						  dispatchWithNoParamsForwardsAnEmptyVector);
+	failures += runTests("dispatchRejectsMissingParametersWithoutCallingTheHandler",
+						  dispatchRejectsMissingParametersWithoutCallingTheHandler);
 
 	return failures;
 }

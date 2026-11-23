@@ -15,9 +15,10 @@
 namespace irc
 {
 	void	Dispatcher::registerHandler(const std::string &command,
-					CommandHandler *handler)
+					CommandHandler *handler, std::size_t minParams)
 	{
 		_handlers[command] = handler;
+		_minParams[command] = minParams;
 	}
 
 	DispatchResult	Dispatcher::dispatch(ClientId actor,
@@ -26,6 +27,8 @@ namespace irc
 		std::map<std::string, CommandHandler *>::const_iterator it = _handlers.find(command.command);
 		if (it == _handlers.end())
 			return DispatchUnknownCommand;
+		if (command.params.size() < _minParams.find(command.command)->second)
+			return DispatchNeedMoreParams;
 		it->second->handle(actor, command.params);
 		return DispatchHandled;
 	}
