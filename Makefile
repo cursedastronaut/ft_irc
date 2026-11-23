@@ -22,6 +22,7 @@ FILES		= main.cpp\
 			net/ClientRecord.cpp\
 			net/ScopedShutdownGuard.cpp\
 			net/parsers.cpp\
+			net/ScopedProtocolBinding.cpp\
 			net/ScopedSocket.cpp\
 			net/ServerConfig.cpp\
 			protocol/Parser.cpp\
