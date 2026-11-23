@@ -173,7 +173,7 @@ enqueueResult	ServerConfig::enqueueLine(ClientId id, const std::string &line) {
 		rec->out_offset = 0;
 		rec->close_after_flush = false;
 		rec->flush_started_at = 0;
-		markClientForCleanup(id, "Ouput buffer limit exceeded");
+		markClientForCleanup(id, "Output buffer limit exceeded");
 		return (Rejected);
 	}
 	if (!rec->hasPendingOutput()) {
