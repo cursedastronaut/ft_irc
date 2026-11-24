@@ -10,6 +10,7 @@
 namespace
 {
 	volatile sig_atomic_t	g_stop_requested = 0;
+	const size_t			kOutBufCompactThreshold = 65536;
 }
 
 extern "C" {
@@ -22,10 +23,39 @@ extern "C" {
 namespace irc 
 {
 //Private
+void	ServerConfig::setClientReadInterest_(int fd, bool enable) {
+	if (fd < 0)
+		return ;
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == fd) {
+			if (enable)
+				_poll_fds[i].events |= POLLIN;
+			else {
+				_poll_fds[i].events &= ~POLLIN;
+				_poll_fds[i].revents &= ~POLLIN;
+			}
+			break ;
+		}
+	}
+}
+
+void	ServerConfig::updateClientReadInterest_(ClientId id) {
+	netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->fd < 0)
+		return ;
+	if (rec->marked_for_cleanup || rec->close_after_flush || rec->disconnecting) {
+		setClientReadInterest_(rec->fd, false);
+		return ;
+	}
+	bool	has_complete = (rec->in_buf.find('\n') != std::string::npos);
+	bool	should_pause = has_complete && (rec->in_buf.size() >= _in_buf_high_water);
+	setClientReadInterest_(rec->fd, !should_pause);
+}
+
 void	ServerConfig::setClientWriteInterest_(int fd, bool enable) {
 	if (fd < 0)
 		return ;
-	for(size_t i = 1; i <_poll_fds.size(); ++i) {
+	for(size_t i = 1; i < _poll_fds.size(); ++i) {
 		if (_poll_fds[i].fd == fd) {
 			if (enable)
 				_poll_fds[i].events |= POLLOUT;
@@ -54,9 +84,15 @@ ServerConfig::ServerConfig(int irc_port, std::string psw,
 	: _port(irc_port), _psw(psw), _client_nb(0), _listen_sock(),
 		_is_listening(false), _poll_fds(), _client_fds(),
 		_next_client_id(1), _id_exhausted(false), _last_accpted_id(0),
-		_clients_by_id(), _fd_to_client_id(), _protocol(proto),
-		_channel_service(channel_service), _line_budget(DEFAULT_LINE_BUDGET),
-		_flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC), _shutting_down(false) {
+		_clients_by_id(), _fd_to_client_id(), _pending_removals(),
+		_protocol(proto), _channel_service(channel_service),
+		_line_budget(DEFAULT_LINE_BUDGET),
+		_dispatch_byte_budget(DEFAULT_DISPATCH_BYTE_BUDGET),
+		_read_byte_budget(DEFAULT_READ_BYTE_BUDGET),
+		_write_byte_budget(DEFAULT_WRITE_BYTE_BUDGET),
+		_in_buf_high_water(DEFAULT_IN_BUF_HIGH_WATER),
+		_flush_timeout_sec(DEFAULT_FLUSH_TIMEOUT_SEC),
+		_shutting_down(false), _last_poll_status(PollIdle) {
 	ignoreSigpipe();
 }
 
@@ -65,9 +101,15 @@ ServerConfig::ServerConfig(const ServerConfig &src)
 		_listen_sock(), _is_listening(false), _poll_fds(), _client_fds(),
 		_next_client_id(src._next_client_id), _id_exhausted(src._id_exhausted),
 		_last_accpted_id(src._last_accpted_id), _clients_by_id(src._clients_by_id),
-		_fd_to_client_id(src._fd_to_client_id), _protocol(src._protocol),
-		_channel_service(src._channel_service), _line_budget(src._line_budget),
-		_flush_timeout_sec(src._flush_timeout_sec), _shutting_down(false) {
+		_fd_to_client_id(src._fd_to_client_id), _pending_removals(),
+		_protocol(src._protocol), _channel_service(src._channel_service),
+		_line_budget(src._line_budget),
+		_dispatch_byte_budget(src._dispatch_byte_budget),
+		_read_byte_budget(src._read_byte_budget),
+		_write_byte_budget(src._write_byte_budget),
+		_in_buf_high_water(src._in_buf_high_water),
+		_flush_timeout_sec(src._flush_timeout_sec),
+		_shutting_down(false), _last_poll_status(PollIdle) {
 	ignoreSigpipe();
 }
 
@@ -107,13 +149,7 @@ void	ServerConfig::requestDisconnection(ClientId id, const std::string &reason, 
 	rec->disconnect_reason = reason;
 	rec->flush_started_at = std::time(NULL);
 	rec->in_buf.clear();
-	for (size_t i = 1; i < _poll_fds.size(); ++i) {
-		if (_poll_fds[i].fd == rec->fd) {
-			_poll_fds[i].events &= ~POLLIN;
-			_poll_fds[i].revents &= ~POLLIN;
-			break ;
-		}
-	}
+	setClientReadInterest_(rec->fd, false);
 }
 
 enqueueResult	ServerConfig::enqueueLine(ClientId id, const std::string &line) {
@@ -278,6 +314,26 @@ size_t	ServerConfig::getLineBudget() const {
 	return (_line_budget);
 }
 
+size_t	ServerConfig::getDispatchByteBudget() const {
+	return (_dispatch_byte_budget);
+}
+
+size_t	ServerConfig::getReadByteBudget() const {
+	return (_read_byte_budget);
+}
+
+size_t	ServerConfig::getWriteByteBudget() const {
+	return (_write_byte_budget);
+}
+
+size_t	ServerConfig::getInBufHighWater() const {
+	return (_in_buf_high_water);
+}
+
+ServerConfig::PollStatus	ServerConfig::getLastPollStatus() const {
+	return (_last_poll_status);
+}
+
 std::string	ServerConfig::getClientDisconnectReason(ClientId id) const {
 	const netClientRecord	*rec = getClientById(id);
 	if (rec == NULL)
@@ -307,8 +363,6 @@ void	ServerConfig::setFlushTimeoutSec(std::time_t timeout_sec) {
 	_flush_timeout_sec = (timeout_sec < 0) ? 0 : timeout_sec;
 }
 
-
-
 bool	ServerConfig::isClientReadable(ClientId id) const {
 	const netClientRecord	*rec = getClientById(id);
 	if (rec == NULL || rec->fd < 0 || rec->marked_for_cleanup || rec->close_after_flush)
@@ -320,11 +374,33 @@ bool	ServerConfig::isClientReadable(ClientId id) const {
 	return (false);
 }
 
+bool	ServerConfig::isClientWritable(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->fd < 0 || rec->marked_for_cleanup)
+		return (false);
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == rec->fd)
+			return ((_poll_fds[i].revents & POLLOUT) != 0);
+	}
+	return (false);
+}
+
 bool	ServerConfig::isFdReadable(int fd) const {
 	ClientId	id = getClientIdByFd(fd);
 	if (id == 0)
 		return (false);
 	return (isClientReadable(id));
+}
+
+bool	ServerConfig::isClientReadInterestEnabled(ClientId id) const {
+	const netClientRecord	*rec = getClientById(id);
+	if (rec == NULL || rec->fd < 0)
+		return (false);
+	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == rec->fd)
+			return ((_poll_fds[i].events & POLLIN) != 0);
+	}
+	return (false);
 }
 
 bool	ServerConfig::isClientWriteInterestEnabled(ClientId id) const {
@@ -343,7 +419,6 @@ bool	ServerConfig::isClientClosingAfterFlush(ClientId id) const {
 	if (rec == NULL)
 		return (false);
 	return (rec->close_after_flush);
-
 }
 
 bool	ServerConfig::isStopRequested() {
@@ -355,7 +430,7 @@ bool	ServerConfig::isShuttingDown() const {
 }
 
 bool	ServerConfig::isClientMarkedForCleanup(ClientId id) const {
-	const netClientRecord	*rec=getClientById(id);
+	const netClientRecord	*rec = getClientById(id);
 	if (rec == NULL)
 		return (false);
 	return(rec->marked_for_cleanup);
@@ -382,11 +457,11 @@ bool	ServerConfig::hasPendingCompleteLines() const {
 		return (false);
 	for (std::map<ClientId, netClientRecord>::const_iterator it = _clients_by_id.begin();
 		it != _clients_by_id.end(); ++it)
-		{
-			if (!it->second.marked_for_cleanup && !it->second.close_after_flush
-					&& it->second.in_buf.find('\n') != std::string::npos)
-				return (true);
-		}
+	{
+		if (!it->second.marked_for_cleanup && !it->second.close_after_flush
+				&& it->second.in_buf.find('\n') != std::string::npos)
+			return (true);
+	}
 	return(false);
 }
 
@@ -429,8 +504,6 @@ bool	ServerConfig::installShutdownSignals() {
 void	ServerConfig::resetStopFlag() {
 	g_stop_requested = 0;
 }
-
-
 
 size_t	ServerConfig::enforceFlushCloseBounds() {
 	if (_shutting_down)
@@ -500,10 +573,10 @@ void	ServerConfig::bindListenerSocket(in_addr_t bind_addr) {
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(bind_addr);
 	addr.sin_port = htons(static_cast<uint16_t>(_port));
-	 if (::bind(_listen_sock.get(), reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
+	if (::bind(_listen_sock.get(), reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
 		closeListener();
 		throw ServerConfig::SocketBindException();
-	 }
+	}
 }
 
 void	ServerConfig::startListening(int backlog) {
@@ -542,26 +615,60 @@ void	ServerConfig::registerListenerInPoll_() {
 	pfd.revents = 0;
 	_last_accpted_id = 0;
 	_client_nb = 0;
+	_last_poll_status = PollIdle;
 	_poll_fds.push_back(pfd);
 }
 
-int	ServerConfig::waitForEvents(int timeout_ms) {
-	if (_shutting_down)
+int	ServerConfig::handlePollResult(int poll_ret) {
+	if (_shutting_down) {
+		_last_poll_status = PollStopRequested;
 		return (0);
-	if (_poll_fds.empty())
+	}
+	if (poll_ret < 0) {
+		if (isStopRequested()) {
+			_last_poll_status = PollStopRequested;
+			return (0);
+		}
+		_last_poll_status = PollError;
+		shutdown("Unrecoverable poll failure");
 		throw ServerConfig::PollException();
+	}
+	if (!_poll_fds.empty() && _poll_fds[0].fd >= 0
+			&& (_poll_fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+		_last_poll_status = PollError;
+		shutdown("Unrecoverable listener poll failure");
+		throw ServerConfig::PollException();
+	}
+	if (isStopRequested()) {
+		_last_poll_status = PollStopRequested;
+		return (0);
+	}
+	_last_poll_status = (poll_ret == 0) ? PollTimeout : PollReady;
+	return (poll_ret);
+}
+
+int	ServerConfig::injectPollResult(int simulated_ret) {
+	return (handlePollResult(simulated_ret));
+}
+
+int	ServerConfig::waitForEvents(int timeout_ms) {
+	if (_shutting_down) {
+		_last_poll_status = PollStopRequested;
+		return (0);
+	}
+	if (_poll_fds.empty()) {
+		_last_poll_status = PollError;
+		throw ServerConfig::PollException();
+	}
 	for (size_t i = 0; i < _poll_fds.size(); ++i) {
 		_poll_fds[i].revents = 0;
 	}
-	if (isStopRequested())
+	if (isStopRequested()) {
+		_last_poll_status = PollStopRequested;
 		return (0);
-	int ready = poll(&_poll_fds[0], _poll_fds.size(), timeout_ms);
-	if (ready < 0) {
-		if (isStopRequested())
-			return (0);
-		throw ServerConfig::PollException();
 	}
-	return (ready);
+	int	ready = ::poll(&_poll_fds[0], _poll_fds.size(), timeout_ms);
+	return (handlePollResult(ready));
 }
 
 int	ServerConfig::acceptReadyClient() {
@@ -642,9 +749,15 @@ ssize_t	ServerConfig::readReadyClient(ClientId id) {
 	if (!found_ready)
 		return (-1);
 	_poll_fds[poll_index].revents &= ~POLLIN;
-	char	buf[CLIENT_READ_BUF_SIZE];
-	ssize_t	n = ::recv(rec->fd, buf, sizeof(buf), 0);
-	return (handleRecvResult(id, buf, n));
+	size_t	to_read = (_read_byte_budget > 0) ? _read_byte_budget : 1;
+	if (to_read <= CLIENT_READ_BUF_SIZE) {
+		char	buf[CLIENT_READ_BUF_SIZE];
+		ssize_t	n = ::recv(rec->fd, buf, to_read, 0);
+		return (handleRecvResult(id, buf, n));
+	}
+	std::vector<char>	buf(to_read);
+	ssize_t				n = ::recv(rec->fd, &buf[0], buf.size(), 0);
+	return (handleRecvResult(id, &buf[0], n));
 }
 
 ssize_t	ServerConfig::readReadyClientByFd(int fd) {
@@ -696,7 +809,9 @@ ssize_t	ServerConfig::writeReadyClient(ClientId id) {
 	_poll_fds[poll_idx].revents &= ~POLLOUT;
 	const char	*data_ptr = rec->out_buf.data() + rec->out_offset;
 	size_t		remaining = rec->out_buf.size() - rec->out_offset;
-	ssize_t		n = ::send(rec->fd, data_ptr, remaining, IRC_SEND_FLAGS);
+	size_t		budget = (_write_byte_budget > 0) ? _write_byte_budget : 1;
+	size_t		to_send = (remaining > budget) ? budget : remaining;
+	ssize_t		n = ::send(rec->fd, data_ptr, to_send, IRC_SEND_FLAGS);
 	return (handleSendResult(id, n));
 }
 
@@ -710,11 +825,12 @@ ssize_t	ServerConfig::writeReadyClientByFd(int fd) {
 size_t	ServerConfig::writeAllReadyClients() {
 	if (_shutting_down)
 		return (0);
-	size_t	write_count = 0;
-	for (size_t i = 1; i < _poll_fds.size(); ++i) {
-		if ((_poll_fds[i].revents & POLLOUT) != 0) {
-			ClientId	id = getClientIdByFd(_poll_fds[i].fd);
-			if (id != 0 && writeReadyClient(id) > 0)
+	size_t				write_count = 0;
+	std::vector<int>	fds_snapshot(_client_fds);
+	for (size_t i = 0; i < fds_snapshot.size(); ++i) {
+		ClientId	id = getClientIdByFd(fds_snapshot[i]);
+		if (id != 0 && isClientWritable(id)) {
+			if (writeReadyClient(id) > 0)
 				++write_count;
 		}
 	}
@@ -723,20 +839,26 @@ size_t	ServerConfig::writeAllReadyClients() {
 
 size_t	ServerConfig::markErroredClientsForCleanup() {
 	size_t	marked = 0;
-	for (size_t i = 1; i < _poll_fds.size(); ++i) {
+	for (size_t i = 1; i < _poll_fds.size(); ) {
 		short	rev = _poll_fds[i].revents;
 		if ((rev & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
 			ClientId	id = getClientIdByFd(_poll_fds[i].fd);
-			if (id != 0 && !isClientMarkedForCleanup(id)) {
-				markClientForCleanup(id, "Poll hangup or error");
-				++marked;
+			if (id != 0) {
+				if (!isClientMarkedForCleanup(id)) {
+					markClientForCleanup(id, "Poll hangup or error");
+					++marked;
+				}
+				_poll_fds[i].revents = 0;
+				++i;
+			} else {
+				_poll_fds.erase(_poll_fds.begin() + i);
 			}
-			_poll_fds[i].revents = 0;
+		} else {
+			++i;
 		}
 	}
 	return (marked);
 }
-
 
 void	ServerConfig::markClientForCleanup(ClientId id, const std::string &reason) {
 	if (_shutting_down)
@@ -762,9 +884,10 @@ ssize_t	ServerConfig::handleRecvResult(ClientId id, const char *buf, ssize_t n) 
 	netClientRecord	*rec = getClientById(id);
 	if (rec == NULL || rec->close_after_flush)
 		return (-1);
-	if (n > 0){
+	if (n > 0) {
 		if (buf != NULL)
 			rec->in_buf.append(buf, static_cast<size_t>(n));
+		updateClientReadInterest_(id);
 		return (n);
 	}
 	if (n == 0) {
@@ -779,7 +902,7 @@ ssize_t	ServerConfig::injectRecvResult(ClientId id, ssize_t simulated_ret) {
 	return (handleRecvResult(id, NULL, simulated_ret));
 }
 
- ssize_t	ServerConfig::handleSendResult(ClientId id, ssize_t n) {
+ssize_t	ServerConfig::handleSendResult(ClientId id, ssize_t n) {
 	netClientRecord	*rec = getClientById(id);
 	if (rec == NULL)
 		return (-1);
@@ -795,12 +918,16 @@ ssize_t	ServerConfig::injectRecvResult(ClientId id, ssize_t simulated_ret) {
 			setClientWriteInterest_(rec->fd, false);
 			if (rec->close_after_flush)
 				markClientForCleanup(id, rec->disconnect_reason);
+		} else if (rec->out_offset >= kOutBufCompactThreshold
+				&& rec->out_offset * 2 >= rec->out_buf.size()) {
+			rec->out_buf.erase(0, rec->out_offset);
+			rec->out_offset = 0;
 		}
 		return (n);
 	}
 	markClientForCleanup(id, "Fatal write failure");
 	return (n);
- }
+}
 
 ssize_t	ServerConfig::injectSendResult(ClientId id, ssize_t simulated_ret) {
 	return (handleSendResult(id, simulated_ret));
@@ -814,9 +941,9 @@ size_t	ServerConfig::cleanupMarkedClients() {
 	to_rm.swap(_pending_removals);
 	for(std::map<ClientId, netClientRecord>::const_iterator it = _clients_by_id.begin();
 		it != _clients_by_id.end(); ++it)
-		{
-			if (it->second.marked_for_cleanup && std::find(to_rm.begin(), to_rm.end(), it->first) == to_rm.end())
-				to_rm.push_back(it->first); 
+	{
+		if (it->second.marked_for_cleanup && std::find(to_rm.begin(), to_rm.end(), it->first) == to_rm.end())
+			to_rm.push_back(it->first); 
 	}
 	for (size_t i = 0; i < to_rm.size(); ++i) {
 		if (disconnectClient(to_rm[i], ""))
@@ -827,6 +954,27 @@ size_t	ServerConfig::cleanupMarkedClients() {
 
 void	ServerConfig::setLineBudget(size_t budget) {
 	_line_budget = (budget == 0) ? 1 : budget;
+}
+
+void	ServerConfig::setDispatchByteBudget(size_t budget) {
+	_dispatch_byte_budget = (budget == 0) ? 1 : budget;
+}
+
+void	ServerConfig::setReadByteBudget(size_t budget) {
+	_read_byte_budget = (budget == 0) ? 1 : budget;
+}
+
+void	ServerConfig::setWriteByteBudget(size_t budget) {
+	_write_byte_budget = (budget == 0) ? 1 : budget;
+}
+
+void	ServerConfig::setInBufHighWater(size_t bytes) {
+	_in_buf_high_water = (bytes == 0) ? 1 : bytes;
+	for (std::map<ClientId, netClientRecord>::const_iterator it = _clients_by_id.begin();
+			it != _clients_by_id.end(); ++it)
+	{
+		updateClientReadInterest_(it->first);
+	}
 }
 
 bool	ServerConfig::extractNextClientLine(ClientId id, std::string &out_line) {
@@ -843,6 +991,7 @@ bool	ServerConfig::extractNextClientLine(ClientId id, std::string &out_line) {
 		--content_len;	
 	out_line.assign(rec->in_buf, 0, content_len);
 	rec->in_buf.erase(0, lf_pos + 1);
+	updateClientReadInterest_(id);
 	return (true);
 }
 
@@ -850,15 +999,22 @@ size_t	ServerConfig::dispatchClientLines(ClientId id) {
 	if (_shutting_down)
 		return (0);
 	size_t		dispatched = 0;
+	size_t		dispatched_bytes = 0;
 	std::string	line;
 	while (dispatched < _line_budget) {
 		if (_shutting_down)
-			break;
-		netClientRecord	*rec =	 getClientById(id);
+			break ;
+		if (dispatched > 0 && dispatched_bytes >= _dispatch_byte_budget)
+			break ;
+		netClientRecord	*rec = getClientById(id);
 		if (rec == NULL || rec->marked_for_cleanup || rec->close_after_flush)
 			break ;
+		size_t	before_size = rec->in_buf.size();
 		if (!extractNextClientLine(id, line))
 			break ;
+		size_t	after_size = rec->in_buf.size();
+		size_t	consumed = (before_size >= after_size) ? (before_size - after_size) : (line.size() + 1);
+		dispatched_bytes += consumed;
 		++dispatched;
 		if (_protocol != NULL)
 			_protocol->online(id, line);
@@ -948,8 +1104,8 @@ void	ServerConfig::shutdown(const std::string &reason) {
 	client_ids.reserve(_clients_by_id.size());
 	for (std::map<ClientId, netClientRecord>::const_iterator it = _clients_by_id.begin();
 			it != _clients_by_id.end(); ++it)
-		{
-			 client_ids.push_back(it->first);
+	{
+		client_ids.push_back(it->first);
 	}
 	const std::string	final_reason = reason.empty() ? "Server shutdown" : reason;
 	for (size_t i = 0; i < client_ids.size(); ++i) {
