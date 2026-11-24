@@ -27,6 +27,8 @@ SUITES = {
 	"shutdown_signals": NET_CORE_SRCS,
 	"shutdown": NET_CORE_SRCS,
 	"socket": NET_CORE_SRCS,
+	"multi_client_smoke": NET_CORE_SRCS,
+	"fragmentation_smoke": NET_CORE_SRCS,
 }
 
 
