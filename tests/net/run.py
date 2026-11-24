@@ -26,6 +26,8 @@ SUITES = {
 	"disconnect_order": NET_CORE_SRCS,
 	"flush_before_close": NET_CORE_SRCS,
 	"shutdown": NET_CORE_SRCS,
+	"multi_client_smoke": NET_CORE_SRCS,
+	"fragmentation_smoke": NET_CORE_SRCS,
 	"shutdown_signals": NET_CORE_SRCS,
 	"work_budgets": NET_CORE_SRCS,
 	"poll_error_policy": NET_CORE_SRCS,
