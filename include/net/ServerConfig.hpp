@@ -32,10 +32,19 @@ namespace irc
 
 class ServerConfig : public transport, public ::PasswordSource
 {
+public:
+	enum PollStatus {
+		PollIdle = 0,
+		PollReady,
+		PollTimeout,
+		PollStopRequested,
+		PollError
+	};
+
 private:
-	const int								_port;		//	Port connection
-	const std::string						_psw;		//	Connection password
-	size_t									_client_nb;	//	Total number of client on the server
+	const int								_port;
+	const std::string						_psw;
+	size_t									_client_nb;
 	ScopedSocket							_listen_sock;
 	bool									_is_listening;
 	std::vector<struct pollfd>				_poll_fds;
@@ -49,16 +58,23 @@ private:
 	protocol								*_protocol;
 	ChannelService							*_channel_service;
 	size_t									_line_budget;
+	size_t									_dispatch_byte_budget;
+	size_t									_read_byte_budget;
+	size_t									_write_byte_budget;
+	size_t									_in_buf_high_water;
 	std::time_t								_flush_timeout_sec;
 	bool									_shutting_down;
+	PollStatus								_last_poll_status;
 
 	ServerConfig();				//	Can't creat an default ircserv
 	ServerConfig	&operator=(const ServerConfig &src);	//	Can't assigne const port or const psw
 	
+	void	setClientReadInterest_(int fd, bool enable);
+	void	updateClientReadInterest_(ClientId id);
 	void	setClientWriteInterest_(int fd, bool enable);
 	void	stopAdmission_();
 
-	public:
+public:
 	//	Constructor
 	ServerConfig(int irc_port, std::string psw, protocol *prtoto = NULL, ChannelService *chan_s = NULL);
 	ServerConfig(const ServerConfig &src);
@@ -125,6 +141,11 @@ private:
 	ChannelService						*getChannelService() const;
 	std::string							getClientDisconnectReason(ClientId id) const;
 	size_t								getLineBudget() const;
+	size_t								getDispatchByteBudget() const;
+	size_t								getReadByteBudget() const;
+	size_t								getWriteByteBudget() const;
+	size_t								getInBufHighWater() const;
+	PollStatus							getLastPollStatus() const;
 	int									getEffectivePollTimeout(int default_timout_ms) const;
 	size_t								getClientPendingOutputSize(ClientId id) const;
 	size_t								getClientOutputOffset(ClientId id) const;
@@ -133,8 +154,10 @@ private:
 	bool								isListenerReady() const;
 	bool								isIdExhausted() const;
 	bool								isClientReadable(ClientId id) const;
+	bool								isClientWritable(ClientId id) const;
 	bool								isFdReadable(int fd) const;
 	bool								isClientMarkedForCleanup(ClientId id) const;
+	bool								isClientReadInterestEnabled(ClientId id) const;
 	bool								isClientWriteInterestEnabled(ClientId id) const;
 	bool								isClientClosingAfterFlush(ClientId id) const;
 	static bool							isStopRequested();
@@ -160,6 +183,8 @@ private:
 	void		closeListener();
 	void		registerListenerInPoll_();
 	int			waitForEvents(int timeout_ms = POLL_TIMEOUT_MS);
+	int			handlePollResult(int poll_ret);
+	int			injectPollResult(int simulated_ret);
 	int			acceptReadyClient();
 	bool		removeClientById(irc::ClientId id);
 	bool		removeClientByFd(int fd);
@@ -175,6 +200,10 @@ private:
 	ssize_t		injectSendResult(ClientId id, ssize_t simulated_red);
 	size_t		cleanupMarkedClients();
 	void		setLineBudget(size_t budget);
+	void		setDispatchByteBudget(size_t budget);
+	void		setReadByteBudget(size_t budget);
+	void		setWriteByteBudget(size_t budget);
+	void		setInBufHighWater(size_t bytes);
 	bool		extractNextClientLine(ClientId id, std::string &out_line);
 	ssize_t		writeReadyClient(ClientId id);
 	ssize_t		writeReadyClientByFd(int fd);
