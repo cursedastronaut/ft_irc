@@ -39,7 +39,6 @@ static void testNet22And23() {
 
 	// NET-23: idle client has no POLLOUT interest
 	CHECK(!serv.isClientWriteInterestEnabled(id));
-	std::cout << "[OK] idle client has no POLLOUT interest" << std::endl;
 
 	// NET-22: reject embedded CR or LF without partial insertion
 	transport *tr = &serv;
@@ -47,7 +46,6 @@ static void testNet22And23() {
 	CHECK(tr->enqueueLine(id, "bad\nline") == Rejected);
 	CHECK(!serv.hasClientPendingOutput(id));
 	CHECK(!serv.isClientWriteInterestEnabled(id));
-	std::cout << "[OK] reject embedded CR or LF without partial insertion" << std::endl;
 
 	// NET-22 + NET-23: valid line appends CRLF once and enables POLLOUT
 	CHECK(tr->enqueueLine(id, ":ircserv 001 nick :Welcome") == Queued);
@@ -55,7 +53,6 @@ static void testNet22And23() {
 	CHECK(serv.isClientWriteInterestEnabled(id));
 
 	::close(peer);
-	std::cout << "[OK] valid line appends CRLF once and enables POLLOUT" << std::endl;
 }
 
 static void testNet24And25() {
@@ -93,7 +90,6 @@ static void testNet24And25() {
 	CHECK(serv.isClientMarkedForCleanup(id1));
 	CHECK(serv.cleanupMarkedClients() == 1);
 	::close(peer1);
-	std::cout << "[OK] Test NET-24 (partial send offset) + NET-25 (injected send <= 0)" << std::endl;
 
 	// 2. Test NET-25: dead peer write triggers RST/SIGPIPE without killing process
 	int peer2 = connectPeer(port);
@@ -116,7 +112,6 @@ static void testNet24And25() {
 	}
 	CHECK(serv.isClientMarkedForCleanup(id2));
 	CHECK(serv.cleanupMarkedClients() == 1);
-	std::cout << "[OK] Test NET-25: dead peer write triggers RST/SIGPIPE without killing process" << std::endl;
 }
 
 static void testNet26() {
@@ -160,7 +155,6 @@ static void testNet26() {
 	
 	::close(p2);
 	::close(p3);
-	std::cout << "[OK] First client closes while second and third send data" << std::endl;
 }
 
 int main() {
