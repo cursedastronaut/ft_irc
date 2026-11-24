@@ -14,7 +14,10 @@ ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
 	"parser": ["src/protocol/Parser.cpp"],
 	"client_registry": ["src/protocol/ClientRegistry.cpp"],
-	"pass_handler": ["src/protocol/ClientRegistry.cpp", "src/commands/auth/PassHandler.cpp"],
+	"pass_handler": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
+					 "src/commands/auth/PassHandler.cpp"],
+	"nick_handler": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
+					 "src/commands/auth/NickHandler.cpp"],
 	"reply": ["src/protocol/Reply.cpp"],
 	"reply_fixtures": ["src/protocol/Reply.cpp"],
 	"dispatcher": ["src/protocol/Dispatcher.cpp"],

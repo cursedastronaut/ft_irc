@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientRegistry.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/22 21:57:09 by nehuen           ###   ########.fr       */
+/*   Updated: 2026/11/23 16:31:31 by nd-angel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ namespace irc
 		cr.passwordAccepted = false;
 		cr.nicknameSet = false;
 		cr.userSet = false;
+		cr.registered = false;
 		cr.id = id;
 		_byID[id] = cr;
 	}
@@ -43,16 +44,27 @@ namespace irc
 
 	void	ClientRegistry::remove(ClientId id)
 	{
-		_byID.erase(id);
+		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
+
+		if (it == _byID.end())
+			return ;
+		if (it->second.nicknameSet)
+			_byNickname.erase(irc::canonicalizeIrcName(it->second.nickname));
+		_byID.erase(it);
 	}
 
 	void ClientRegistry::setNickname(ClientId id, const std::string &nickname)
 	{
-		std::map<ClientId, ClientRecord>::const_iterator it = _byID.find(id);
-		
+		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
+
 		if (it == _byID.end())
 			return ;
-		_byID[id].nickname = nickname;
+		// PROTO-19: free the old key BEFORE writing the new one, so that
+		// bob -> BOB (same canonical key) does not erase the fresh entry
+		if (it->second.nicknameSet)
+			_byNickname.erase(irc::canonicalizeIrcName(it->second.nickname));
+		it->second.nickname = nickname;
+		it->second.nicknameSet = true;
 		_byNickname[irc::canonicalizeIrcName(nickname)] = id;
 	}
 
@@ -74,5 +86,23 @@ namespace irc
 			return false ;
 		out = it->second;
 		return true ;
+	}
+
+	void	ClientRegistry::setRegistered(ClientId id)
+	{
+		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
+
+		if (it == _byID.end())
+			return ;
+		it->second.registered = true;
+	}
+
+	std::string	ClientRegistry::recipientFor(ClientId id) const
+	{
+		std::map<ClientId, ClientRecord>::const_iterator it = _byID.find(id);
+
+		if (it == _byID.end() || !it->second.nicknameSet)
+			return "*";
+		return it->second.nickname;
 	}
 }

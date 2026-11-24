@@ -2,6 +2,7 @@
 #include "protocol/Dispatcher.hpp"
 #include "protocol/DispatchProtocol.hpp"
 #include "commands/auth/PassHandler.hpp"
+#include "commands/auth/NickHandler.hpp"
 
 int	main(int ac, char **av) {
 	if (ac != 3){
@@ -19,14 +20,17 @@ int	main(int ac, char **av) {
 		
 		int						port = irc::port_parser(av[1]);
 		std::string				psw = irc::psw_parser(av[2]);
+		irc::ServerConfig		serv(port, psw);
 		irc::ClientRegistry		registry;
 		irc::Dispatcher			dispatcher;
-		irc::DispatchProtocol	adaptater(dispatcher, registry);
-		irc::ServerConfig		serv(port, psw, &adaptater);
-    
-		irc::PassHandler passHandler(registry, serv);
+		irc::DispatchProtocol	adaptater(dispatcher, registry, serv);
+		serv.setProtocol(&adaptater);
+
+		irc::PassHandler passHandler(registry, serv, serv);
 		dispatcher.registerHandler("PASS", &passHandler, 1);
-		
+		irc::NickHandler nickHandler(registry, serv);
+		dispatcher.registerHandler("NICK", &nickHandler, 0);
+
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;
 
