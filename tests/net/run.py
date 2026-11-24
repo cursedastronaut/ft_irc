@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 NET_CORE_SRCS = [
 	"src/net/ClientRecord.cpp",
 	"src/net/parsers.cpp",
+	"src/net/ScopedProtocolBinding.cpp",
 	"src/net/ScopedShutdownGuard.cpp",
 	"src/net/ScopedSocket.cpp",
 	"src/net/ServerConfig.cpp",

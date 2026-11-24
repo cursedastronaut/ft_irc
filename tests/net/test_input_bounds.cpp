@@ -146,9 +146,10 @@ int	main() {
 	irc::ClientId	c5 = 0;
 	int				fd5 = connectLoopback(serv, c5);
 	CHECK(fd5 >= 0 && c5 != 0);
-	serv.setMaxInputBufferBytes(64);
+	serv.setMaxInputBufferBytes(512);
+	CHECK(serv.getMaxInputBufferBytes() == 512);
 	const std::string	short_lines = "A\nB\nC\nD\nE\nF\nG\nH\n"; // 16 bytes
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 32; ++i) {
 		CHECK(serv.handleRecvResult(c5, short_lines.data(),
 				static_cast<ssize_t>(short_lines.size())) == 16);
 	}
