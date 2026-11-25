@@ -8,15 +8,10 @@ namespace
 class FakeTransport : public transport
 {
 	public:
-		FakeTransport(const std::string &host) : _host(host) {}
-
 		ClientIdentity returnIdentity(irc::ClientId id) const
 		{
-			ClientIdentity identity;
-
 			(void)id;
-			identity.host = _host;
-			return identity;
+			return ClientIdentity();
 		}
 
 		void requestDisconnection(irc::ClientId id, const std::string &reason,
@@ -36,34 +31,47 @@ class FakeTransport : public transport
 
 		std::vector<irc::ClientId> ids;
 		std::vector<std::string> lines;
-
-	private:
-		std::string _host;
 };
 
 void sendWelcomeEnqueuesTheExactWireFormat()
 {
 	irc::ClientRegistry registry;
-	FakeTransport net("localhost");
+	FakeTransport net;
 
 	registry.create(1);
 	registry.setNickname(1, "bob");
 	registry.setUser(1, "bob", "Bob Real");
+	registry.setPasswordAccepted(1, true);
 
 	irc::sendWelcome(1, registry, net);
 
 	CHECK(net.lines.size() == 1);
 	CHECK(net.ids[0] == 1);
 	CHECK(net.lines[0] == ":ircserv 001 bob :Welcome to the Internet Relay "
-						   "Network bob!bob@localhost");
+						   "Network bob!bob@ircserv");
 }
 
 void sendWelcomeOnAnUnknownClientDoesNothing()
 {
 	irc::ClientRegistry registry;
-	FakeTransport net("localhost");
+	FakeTransport net;
 
 	irc::sendWelcome(999, registry, net);
+
+	CHECK(net.lines.empty());
+}
+
+void sendWelcomeOnANotYetFullyRegisteredClientDoesNothing()
+{
+	irc::ClientRegistry registry;
+	FakeTransport net;
+
+	registry.create(1);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+	// passwordAccepted never set -> not registered yet
+
+	irc::sendWelcome(1, registry, net);
 
 	CHECK(net.lines.empty());
 }
@@ -78,6 +86,8 @@ int main()
 						  sendWelcomeEnqueuesTheExactWireFormat);
 	failures += runTests("sendWelcomeOnAnUnknownClientDoesNothing",
 						  sendWelcomeOnAnUnknownClientDoesNothing);
+	failures += runTests("sendWelcomeOnANotYetFullyRegisteredClientDoesNothing",
+						  sendWelcomeOnANotYetFullyRegisteredClientDoesNothing);
 
 	return failures;
 }

@@ -17,18 +17,18 @@ namespace irc
 {
 	void	sendWelcome(ClientId id, ClientRegistry &registry, transport &net)
 	{
-		ClientRecord record;
 		ClientIdentity identity;
 		std::vector<std::string> noParams;
-		if (!registry.find(id, record))
-			return ;
-		identity = net.returnIdentity(id);
-	
 
-		const std::string text = "Welcome to the Internet Relay Network " 
-		+ record.nickname + "!" + record.username + 
-		"@" + identity.host;
-	
+		// registry.identityOf() provides a server-owned host mask,
+		// independent of net.returnIdentity() (still a stub on the
+		// transport side as of PROTO-20/21/22).
+		if (!registry.identityOf(id, identity))
+			return ;
+
+		const std::string text = "Welcome to the Internet Relay Network "
+			+ identity.nickname + "!" + identity.username + "@" + identity.host;
+
 		std::string line;
 		if (buildNumericReply(1, registry.recipientFor(id), noParams, text, line) == ReplySuccess)
 			net.enqueueLine(id, line);
