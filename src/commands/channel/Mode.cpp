@@ -45,6 +45,13 @@ void Mode::execute(ClientId actor, const ClientIdentity &identity, const Paramet
     if (!channel)
         return;
 
+    // irssi requests the ban list after WHO. This server stores no bans.
+    if (params.size() == 2 && (params[1] == "b" || params[1] == "+b"))
+    {
+        numeric(actor, identity, 368, Parameters(1, channel->displayName()), "End of channel ban list");
+        return;
+    }
+
     if (params.size() == 1)
     {
         const ChannelModes &modes = channel->modes;
