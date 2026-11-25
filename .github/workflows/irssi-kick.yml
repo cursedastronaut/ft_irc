@@ -1,0 +1,13 @@
+name: irssi kick and rejoin
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  kick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -j2
+      - run: sudo apt-get -o Acquire::Retries=2 update && sudo apt-get install -y irssi python3-pexpect
+      - run: /usr/bin/python3 tests/runtime/irssi_kick.py
