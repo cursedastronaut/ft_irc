@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientRegistry.hpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/23 16:31:17 by nd-angel         ###   ########.fr       */
+/*   Updated: 2026/11/25 14:13:57 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@ namespace irc
 	{
 		ClientId	id;
 		std::string	nickname;
+		std::string	username;
+		std::string	realname;
 		bool		passwordAccepted;
 		bool		nicknameSet;
 		bool		userSet;
@@ -37,16 +39,19 @@ namespace irc
 			void	create(ClientId id);
 			bool	find(ClientId id, ClientRecord &out) const;
 			void	remove(ClientId id);
-			void	setNickname(ClientId id, const std::string &nickname);
-			void	setPasswordAccepted(ClientId id, bool accepted);
+			bool	setNickname(ClientId id, const std::string &nickname);
+			bool	setPasswordAccepted(ClientId id, bool accepted);
 			bool	clientIdForNickname(const std::string &nickname, ClientId &out) const;
 			void	setRegistered(ClientId id);
+			
 			// numeric reply target: current nickname, or "*" before NICK
 			std::string	recipientFor(ClientId id) const;
+			bool	setUser(ClientId id, const std::string &username, const std::string &realname);
 
 		private:
 			std::map<ClientId, ClientRecord>	_byID;
-			std::map<std::string, ClientId>	_byNickname;
+			std::map<std::string, ClientId>		_byNickname;
+			bool 	maybeRegister(ClientId id);
 	};
 }
 

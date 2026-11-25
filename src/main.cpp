@@ -3,6 +3,7 @@
 #include "protocol/DispatchProtocol.hpp"
 #include "commands/auth/PassHandler.hpp"
 #include "commands/auth/NickHandler.hpp"
+#include "commands/auth/UserHandler.hpp"
 
 int	main(int ac, char **av) {
 	if (ac != 3){
@@ -30,6 +31,8 @@ int	main(int ac, char **av) {
 		dispatcher.registerHandler("PASS", &passHandler, 1);
 		irc::NickHandler nickHandler(registry, serv);
 		dispatcher.registerHandler("NICK", &nickHandler, 0);
+		irc::UserHandler userHandler(registry, serv);
+		dispatcher.registerHandler("USER", &userHandler, 4);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;

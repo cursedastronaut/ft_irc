@@ -290,6 +290,77 @@ void twoClientsWithDifferentNicknamesDoNotCollide()
 	CHECK(foundSecond == 2UL);
 }
 
+void completingPassNickUserInThatOrderSetsRegistered()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.registered == true);
+}
+
+void completingTheSameThreeInAReversedOrderAlsoSetsRegistered()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setUser(1, "bob", "Bob Real");
+	registry.setNickname(1, "bob");
+	registry.setPasswordAccepted(1, true);
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.registered == true);
+}
+
+void missingOnePrerequisiteLeavesTheClientUnregistered()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setNickname(1, "bob");
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.registered == false);
+}
+
+void aFailedPasswordAfterTheOtherTwoPrerequisitesDoesNotRegister()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+	registry.setPasswordAccepted(1, false);
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.registered == false);
+}
+
+void onceRegisteredARenameDoesNotUnregisterTheClient()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+	registry.setNickname(1, "alice");
+
+	CHECK(registry.find(1, out) == true);
+	CHECK(out.registered == true);
+	CHECK(out.nickname == "alice");
+}
+
 }
 
 int main()
@@ -341,6 +412,16 @@ int main()
 						  differentSpellingVariantsResolveToTheSameClient);
 	failures += runTests("twoClientsWithDifferentNicknamesDoNotCollide",
 						  twoClientsWithDifferentNicknamesDoNotCollide);
+	failures += runTests("completingPassNickUserInThatOrderSetsRegistered",
+						  completingPassNickUserInThatOrderSetsRegistered);
+	failures += runTests("completingTheSameThreeInAReversedOrderAlsoSetsRegistered",
+						  completingTheSameThreeInAReversedOrderAlsoSetsRegistered);
+	failures += runTests("missingOnePrerequisiteLeavesTheClientUnregistered",
+						  missingOnePrerequisiteLeavesTheClientUnregistered);
+	failures += runTests("aFailedPasswordAfterTheOtherTwoPrerequisitesDoesNotRegister",
+						  aFailedPasswordAfterTheOtherTwoPrerequisitesDoesNotRegister);
+	failures += runTests("onceRegisteredARenameDoesNotUnregisterTheClient",
+						  onceRegisteredARenameDoesNotUnregisterTheClient);
 
 	return failures;
 }
