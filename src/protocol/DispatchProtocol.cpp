@@ -57,20 +57,6 @@ namespace irc
 				sendNumeric(id, 421, recipient, out.command, "Unknown command");
 			else if (result == DispatchNeedMoreParams)
 				sendNumeric(id, 461, recipient, out.command, "Not enough parameters");
-            else if (known && !record.registered && _registry.find(id, record) && record.canRegister())
-            {
-                std::string welcome;
-                if (buildNumericReply(1, record.nickname, std::vector<std::string>(),
-                        "Welcome to ircserv " + record.nickname, welcome) == ReplySuccess
-                    && _transport.enqueueLine(id, welcome) == Queued)
-                    {
-                    _registry.setRegistered(id);
-                    std::string end;
-                    if (buildNumericReply(422, record.nickname, std::vector<std::string>(),
-                            "MOTD File is missing", end) == ReplySuccess)
-                        _transport.enqueueLine(id, end);
-                }
-            }
 		}
 		catch (const std::exception &)
 		{

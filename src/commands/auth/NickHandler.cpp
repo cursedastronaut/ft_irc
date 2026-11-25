@@ -3,16 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   NickHandler.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/23 18:16:20 by nd-angel          #+#    #+#             */
-/*   Updated: 2026/11/23 21:26:53 by nd-angel         ###   ########.fr       */
+/*   Updated: 2026/11/25 15:51:04 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "commands/auth/NickHandler.hpp"
 #include "protocol/Reply.hpp"
 #include <cctype>
+#include "commands/auth/Welcome.hpp"
 
 namespace irc
 {
@@ -56,8 +57,8 @@ namespace irc
 
 	void	NickHandler::handle(ClientId actor, const std::vector<std::string> &params)
 	{
-		ClientRecord				record;
-		ClientId					owner;
+		ClientRecord							record;
+		ClientId									owner;
 		std::vector<std::string>	nickParam;
 
 		if (!_registry.find(actor, record))
@@ -69,6 +70,7 @@ namespace irc
 			return reply(actor, 432, nickParam, "Erroneous nickname");
 		if (_registry.clientIdForNickname(params[0], owner) && owner != actor)
 			return reply(actor, 433, nickParam, "Nickname is already in use");
-		_registry.setNickname(actor, params[0]);
+		if (_registry.setNickname(actor, params[0]))
+			sendWelcome(actor, _registry, _transport);
 	}
 }
