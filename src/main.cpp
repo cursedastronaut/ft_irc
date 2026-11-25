@@ -12,6 +12,7 @@
 #include "commands/channel/Topic.hpp"
 #include "commands/channel/Kick.hpp"
 #include "commands/channel/Invite.hpp"
+#include "commands/channel/ChannelMessage.hpp"
 
 namespace
 {
@@ -81,6 +82,8 @@ int	main(int ac, char **av) {
         dispatcher.registerHandler("TOPIC", &topic);
         irc::Kick kick(channelContext);
         dispatcher.registerHandler("KICK", &kick);
+        irc::ChannelMessage channelMessage(channelContext);
+        dispatcher.registerHandler("PRIVMSG", &channelMessage);
         irc::Invite invite(channelContext);
         dispatcher.registerHandler("INVITE", &invite);
 
