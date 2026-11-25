@@ -20,6 +20,8 @@ static void verify()
     CHECK(h.wire.lines[1001][1].find("461 Alice MODE") != std::string::npos);
     CHECK(!room.isOperator(1002));
 
+    h.send(1002, "MODE #room +i");
+    CHECK(!room.modes.inviteOnly && h.wire.lines[1002].back().find("482 Bob") != std::string::npos);
     h.send(1002, "MODE #room");
     CHECK(h.wire.lines[1002].back() == ":ircserv 324 Bob #Room +");
     room.modes.inviteOnly = room.modes.topicRestricted = room.modes.hasKey = room.modes.hasLimit = true;

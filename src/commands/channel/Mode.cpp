@@ -70,6 +70,11 @@ void Mode::execute(ClientId actor, const ClientIdentity &identity, const Paramet
         return;
     }
 
+    if (!channel->isOperator(actor))
+    {
+        numeric(actor, identity, 482, Parameters(1, channel->displayName()), "You're not channel operator");
+        return;
+    }
     std::vector<ModeStep> plan = planModeChanges(params);
     for (size_t i = 0; i < plan.size(); ++i)
     {
