@@ -43,14 +43,28 @@ namespace irc
 			known = _registry.find(id, record);
 			if (known && !record.nickname.empty())
 				recipient = record.nickname;
-			if ((!known || !record.canRegister()) && !isPreRegistrationCommand(out.command))
+			if (out.command == "CAP" && !out.params.empty())
+            {
+                if (out.params[0] == "LS")
+                    _transport.enqueueLine(id, ":ircserv CAP * LS :");
+                return;
+            }
+            if ((!known || !record.registered) && !isPreRegistrationCommand(out.command))
 				return; //next issue send error to client
-			// TODO PROTO-21: canRegister() est un substitut temporaire a "est enregistre")
+			
 			DispatchResult result = _dispatcher.dispatch(id, out);
 			if (result == DispatchUnknownCommand)
 				sendNumeric(id, 421, recipient, out.command, "Unknown command");
 			else if (result == DispatchNeedMoreParams)
 				sendNumeric(id, 461, recipient, out.command, "Not enough parameters");
+            else if (known && !record.registered && _registry.find(id, record) && record.canRegister())
+            {
+                std::string welcome;
+                if (buildNumericReply(1, record.nickname, std::vector<std::string>(),
+                        "Welcome to ircserv " + record.nickname, welcome) == ReplySuccess
+                    && _transport.enqueueLine(id, welcome) == Queued)
+                    _registry.setRegistered(id);
+            }
 		}
 		catch (const std::exception &)
 		{
