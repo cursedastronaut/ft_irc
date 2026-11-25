@@ -36,6 +36,23 @@ class ChannelModes(ServerTest):
         guest.send("JOIN #a")
         guest.until(" JOIN :#a")
 
+    def test_operator_part_and_recreation(self):
+        op, member, guest = [self.login(n) for n in ("Op", "Member", "Guest")]
+        op.send("JOIN #a")
+        op.until(" JOIN :#a")
+        member.send("JOIN #a")
+        member.until(" JOIN :#a")
+        op.send("MODE #a +i", "INVITE Guest #a", "PART #a")
+        op.until(" PART #a")
+        member.send("MODE #a -i")
+        member.until(" 482 ")
+        member.send("PART #a")
+        member.until(" PART #a")
+        op.send("JOIN #a", "MODE #a +i")
+        op.until(" MODE #a +i")
+        guest.send("JOIN #a")
+        guest.until(" 473 ")
+
     def test_mixed_modes_and_lifecycle(self):
         op, member = self.login("Op"), self.login("Member")
         op.send("JOIN #a")

@@ -51,7 +51,7 @@ namespace irc
             }
             if ((!known || !record.registered) && !isPreRegistrationCommand(out.command))
 				return; //next issue send error to client
-			
+
 			DispatchResult result = _dispatcher.dispatch(id, out);
 			if (result == DispatchUnknownCommand)
 				sendNumeric(id, 421, recipient, out.command, "Unknown command");
