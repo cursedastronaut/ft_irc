@@ -26,6 +26,21 @@ void Invite::execute(ClientId actor, const ClientIdentity &identity, const Param
         numeric(actor, identity, 482, Parameters(1, channel->displayName()), "You're not channel operator");
         return;
     }
-    channel->addInvitation(target);
+    ClientIdentity invited;
+    if (!context.identities.identityOf(target, invited))
+        return;
+    std::string event;
+    if (buildEventLine(identity, "INVITE", Parameters(1, invited.nickname),
+                       channel->displayName(), event) != ReplySuccess)
+        return;
+    bool added = channel->addInvitation(target);
+    if (context.output.enqueueLine(target, event) != Queued)
+    {
+        if (added)
+            channel->revokeInvitation(target);
+        return;
+    }
+    fields[0] = invited.nickname;
+    numeric(actor, identity, 341, fields, "Inviting");
 }
 }
