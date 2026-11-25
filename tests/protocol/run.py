@@ -12,6 +12,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
+    "user_handler": ["src/commands/auth/UserHandler.cpp", "src/protocol/ClientRegistry.cpp",
+                     "src/protocol/Reply.cpp"],
 	"parser": ["src/protocol/Parser.cpp"],
 	"client_registry": ["src/protocol/ClientRegistry.cpp"],
 	"pass_handler": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
