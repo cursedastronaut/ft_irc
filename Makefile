@@ -43,6 +43,7 @@ FILES		= main.cpp\
 			commands/channel/Part.cpp\
 			commands/channel/Topic.cpp\
 			commands/channel/Kick.cpp\
+			commands/channel/ChannelMessage.cpp\
 			commands/channel/Invite.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
