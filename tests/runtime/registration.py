@@ -71,7 +71,7 @@ class Registration(ServerTest):
             self.assertEqual(len(peer.until(" 001 " + nick + " ")), 1)
             peer.send("USER x 0 * :Repeat", "JOIN #room", "MODE #room")
             replies = peer.until(" 324 " + nick + " #room +")
-            self.assertIn(" 462 ", replies[0])
+            self.assertTrue(any(" 462 " in line for line in replies))
             self.assertFalse(any(" 001 " in line for line in replies))
 
     def test_missing_credentials(self):

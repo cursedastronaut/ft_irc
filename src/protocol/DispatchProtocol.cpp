@@ -63,7 +63,13 @@ namespace irc
                 if (buildNumericReply(1, record.nickname, std::vector<std::string>(),
                         "Welcome to ircserv " + record.nickname, welcome) == ReplySuccess
                     && _transport.enqueueLine(id, welcome) == Queued)
+                    {
                     _registry.setRegistered(id);
+                    std::string end;
+                    if (buildNumericReply(422, record.nickname, std::vector<std::string>(),
+                            "MOTD File is missing", end) == ReplySuccess)
+                        _transport.enqueueLine(id, end);
+                }
             }
 		}
 		catch (const std::exception &)
