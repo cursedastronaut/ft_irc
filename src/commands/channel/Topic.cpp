@@ -15,8 +15,6 @@ void Topic::execute(ClientId actor, const ClientIdentity &identity, const Parame
         return;
     }
 
-    if (params[1].empty())
-        return;
     if (channel->modes.topicRestricted && !channel->isOperator(actor))
     {
         numeric(actor, identity, 482, fields, "You're not channel operator");
