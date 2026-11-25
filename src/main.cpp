@@ -6,6 +6,7 @@
 
 #include "commands/auth/UserHandler.hpp"
 #include "commands/channel/Join.hpp"
+#include "commands/channel/Names.hpp"
 #include "commands/channel/Mode.hpp"
 #include "commands/channel/Part.hpp"
 #include "commands/channel/Topic.hpp"
@@ -66,6 +67,8 @@ int	main(int ac, char **av) {
 
         irc::UserHandler user(registry, serv);
         dispatcher.registerHandler("USER", &user, 4);
+        irc::Names names(channelContext);
+        dispatcher.registerHandler("NAMES", &names);
         irc::Join join(channelContext);
         dispatcher.registerHandler("JOIN", &join);
         irc::Mode mode(channelContext);
