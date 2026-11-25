@@ -13,7 +13,7 @@
 #ifndef IRC_PROTOCOL_CLIENT_REGISTRY_HPP
 # define IRC_PROTOCOL_CLIENT_REGISTRY_HPP
 
-# include "contracts/ClientId.hpp"
+# include "contracts/ChannelService.hpp"
 # include <map>
 # include <string>
 
@@ -23,6 +23,8 @@ namespace irc
 	{
 		ClientId	id;
 		std::string	nickname;
+		std::string username;
+		std::string realname;
 		bool		passwordAccepted;
 		bool		nicknameSet;
 		bool		userSet;
@@ -31,7 +33,7 @@ namespace irc
 		bool	canRegister() const;
 	};
 
-	class ClientRegistry
+	class ClientRegistry : public IdentityLookup
 	{
 		public:
 			void	create(ClientId id);
@@ -40,7 +42,10 @@ namespace irc
 			void	setNickname(ClientId id, const std::string &nickname);
 			void	setPasswordAccepted(ClientId id, bool accepted);
 			bool	clientIdForNickname(const std::string &nickname, ClientId &out) const;
-			void	setRegistered(ClientId id);
+			bool    isRegistered(ClientId id) const;
+            bool    identityOf(ClientId id, ::ClientIdentity &out) const;
+            void    setUser(ClientId id, const std::string &username, const std::string &realname);
+            void	setRegistered(ClientId id);
 			// numeric reply target: current nickname, or "*" before NICK
 			std::string	recipientFor(ClientId id) const;
 
