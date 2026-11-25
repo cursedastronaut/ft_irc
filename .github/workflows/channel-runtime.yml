@@ -11,3 +11,4 @@ jobs:
       - run: make -j2
       - run: python3 tests/runtime/registration.py
       - run: python3 tests/runtime/channel_modes.py
+      - run: python3 tests/runtime/permissions.py
