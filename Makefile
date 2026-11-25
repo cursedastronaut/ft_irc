@@ -33,10 +33,13 @@ FILES		= main.cpp\
 			commands/auth/PassHandler.cpp\
 			commands/auth/NickHandler.cpp\
 			commands/auth/UserHandler.cpp\
+			commands/auth/Welcome.cpp\
 			channels/Channel.cpp\
 			channels/ChannelName.cpp\
 			channels/ChannelRegistry.cpp\
 			commands/channel/ChannelCommand.cpp\
+			commands/channel/Who.cpp\
+			commands/channel/Names.cpp\
 			commands/channel/Join.cpp\
 			commands/channel/Mode.cpp\
 			commands/channel/Part.cpp\

@@ -39,6 +39,8 @@ for fixture in (ROOT / "tests/channels/commands").glob("*.cpp"):
     ]
 
 
+SUITES["commands/Join"].append("src/commands/channel/Names.cpp")
+
 def main():
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("--suite", choices=sorted(SUITES))
