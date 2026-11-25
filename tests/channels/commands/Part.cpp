@@ -8,7 +8,10 @@ static void verify()
     h.dispatch.registerHandler("PART", &handler);
     irc::Channel &room = h.room();
     h.send(1003, "PART #room :outside");
-    CHECK(room.members.size() == 2);
+    CHECK(h.wire.lines[1003].back().find("442 Carol #Room") != std::string::npos);
+    h.send(1002, "PART #missing");
+    CHECK(h.wire.lines[1002].back().find("403 Bob #missing") != std::string::npos);
+    CHECK(room.members.size() == 2 && h.registry.size() == 1);
     h.send(1001, "PART #room :back later");
     CHECK(!room.containsMember(1001) && !room.isOperator(1001));
     CHECK(h.wire.lines[1001].back() == ":Alice!user@localhost PART #Room :back later");

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientRegistry.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/10 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/23 16:31:31 by nd-angel         ###   ########.fr       */
+/*   Updated: 2026/11/25 15:57:35 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,12 +53,12 @@ namespace irc
 		_byID.erase(it);
 	}
 
-	void ClientRegistry::setNickname(ClientId id, const std::string &nickname)
+	bool ClientRegistry::setNickname(ClientId id, const std::string &nickname)
 	{
 		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
 
 		if (it == _byID.end())
-			return ;
+			return false;
 		// PROTO-19: free the old key BEFORE writing the new one, so that
 		// bob -> BOB (same canonical key) does not erase the fresh entry
 		if (it->second.nicknameSet)
@@ -66,16 +66,28 @@ namespace irc
 		it->second.nickname = nickname;
 		it->second.nicknameSet = true;
 		_byNickname[irc::canonicalizeIrcName(nickname)] = id;
+		return maybeRegister(id);
 	}
 
-	void ClientRegistry::setPasswordAccepted(ClientId id, bool accepted)
+	bool ClientRegistry::setPasswordAccepted(ClientId id, bool accepted)
 	{
 		// TODO PROTO-15: même pattern que setNickname (find, bail si absent,
 		if (_byID.find(id) == _byID.end())
-			return ;
+			return false;
 		_byID[id].passwordAccepted = accepted;
+		return maybeRegister(id);
 	}	
 	
+	bool	ClientRegistry::setUser(ClientId id, const std::string &username, const std::string &realname)
+	{
+		if (_byID.find(id) == _byID.end())
+			return false;
+		_byID[id].username = username;
+		_byID[id].realname = realname;
+		_byID[id].userSet = true;
+		return maybeRegister(id);
+	}
+
 
 	bool ClientRegistry::clientIdForNickname(const std::string &nickname, ClientId &out) const	
 	
@@ -105,17 +117,6 @@ namespace irc
         return true;
     }
 
-    void ClientRegistry::setUser(ClientId id, const std::string &username, const std::string &realname)
-    {
-        std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
-        if (it == _byID.end() || it->second.userSet)
-            return;
-        std::string user(username), real(realname);
-        it->second.username.swap(user);
-        it->second.realname.swap(real);
-        it->second.userSet = true;
-    }
-
 	void	ClientRegistry::setRegistered(ClientId id)
 	{
 		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);
@@ -125,6 +126,15 @@ namespace irc
 		it->second.registered = true;
 	}
 
+	bool 	ClientRegistry::maybeRegister(ClientId id)
+	{
+		if (!_byID[id].registered && _byID[id].canRegister())
+		{
+			_byID[id].registered = true;
+			return true;
+		}
+		return false;
+	}
 	std::string	ClientRegistry::recipientFor(ClientId id) const
 	{
 		std::map<ClientId, ClientRecord>::const_iterator it = _byID.find(id);

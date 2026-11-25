@@ -33,6 +33,7 @@ FILES		= main.cpp\
 			commands/auth/PassHandler.cpp\
 			commands/auth/NickHandler.cpp\
 			commands/auth/UserHandler.cpp\
+			commands/auth/Welcome.cpp\
 			channels/Channel.cpp\
 			channels/ChannelName.cpp\
 			channels/ChannelRegistry.cpp\

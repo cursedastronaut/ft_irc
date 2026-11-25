@@ -3,15 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   PassHandler.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/22 00:00:00 by nehuen            #+#    #+#             */
-/*   Updated: 2026/11/23 16:48:31 by nd-angel         ###   ########.fr       */
+/*   Updated: 2026/11/25 15:51:08 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "commands/auth/PassHandler.hpp"
 #include "protocol/Reply.hpp"
+#include "commands/auth/Welcome.hpp"
 
 namespace irc
 {
@@ -35,6 +36,7 @@ namespace irc
 				_transport.enqueueLine(actor, line);
 			return ;
 		}
-		_registry.setPasswordAccepted(actor, params[0] == _source.getPassword());
+		if (_registry.setPasswordAccepted(actor, params[0] == _source.getPassword()))
+			sendWelcome(actor, _registry, _transport);
 	}
 }

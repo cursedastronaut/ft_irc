@@ -26,6 +26,13 @@ static void verify()
     room.modes.topicRestricted = true;
     h.send(1002, "TOPIC #room :denied");
     CHECK(room.topic == "new topic");
+    h.send(1002, "TOPIC #room :");
+    CHECK(room.topic == "new topic" && h.wire.lines[1002].back().find("482 Bob") != std::string::npos);
+    h.send(1001, "TOPIC #room :");
+    CHECK(room.topic.empty());
+    CHECK(h.wire.lines[1002].back() == ":Alice!user@localhost TOPIC #Room :");
+    h.send(1002, "TOPIC #room");
+    CHECK(h.wire.lines[1002].back().find("331 Bob") != std::string::npos);
 }
 
 int main() { return runTests("Topic", verify); }
