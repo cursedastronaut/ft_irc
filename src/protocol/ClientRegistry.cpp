@@ -100,6 +100,23 @@ namespace irc
 		return true ;
 	}
 
+    bool ClientRegistry::isRegistered(ClientId id) const
+    {
+        std::map<ClientId, ClientRecord>::const_iterator it = _byID.find(id);
+        return it != _byID.end() && it->second.registered;
+    }
+
+    bool ClientRegistry::identityOf(ClientId id, ClientIdentity &out) const
+    {
+        std::map<ClientId, ClientRecord>::const_iterator it = _byID.find(id);
+        if (it == _byID.end() || !it->second.registered)
+            return false;
+        out.nickname = it->second.nickname;
+        out.username = it->second.username;
+        out.host = "ircserv"; // Server-owned host mask, independent of USER fields.
+        return true;
+    }
+
 	void	ClientRegistry::setRegistered(ClientId id)
 	{
 		std::map<ClientId, ClientRecord>::iterator it = _byID.find(id);

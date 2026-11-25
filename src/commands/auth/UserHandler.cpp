@@ -37,8 +37,17 @@ namespace irc
 				_transport.enqueueLine(id, line);
 			return ;
 		}
+		if (params[0].empty() || params[1].empty() || params[2].empty() || params[3].empty()
+			|| params[0].find_first_of(" !@:\r\n\t") != std::string::npos
+			|| params[0].find('\0') != std::string::npos
+			|| params[0].size() > 64)
+		{
+			if (buildNumericReply(461, _registry.recipientFor(id), std::vector<std::string>(1, "USER"),
+					"Invalid USER parameters", line) == ReplySuccess)
+				_transport.enqueueLine(id, line);
+			return ;
+		}
 		if (_registry.setUser(id, params[0], params[3]))
 			sendWelcome(id, _registry, _transport);
 	}
-	
 }
