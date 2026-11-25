@@ -1,5 +1,6 @@
 #include "commands/channel/Mode.hpp"
 #include <sstream>
+#include <limits>
 
 std::vector<irc::ModeStep> irc::planModeChanges(const Parameters &params)
 {
@@ -39,6 +40,100 @@ std::vector<irc::ModeStep> irc::planModeChanges(const Parameters &params)
 
 namespace irc
 {
+// A limit is a positive decimal representable by the channel's size_type.
+static bool parseLimit(const std::string &text, size_t &value)
+{
+    value = 0;
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] < '0' || text[i] > '9')
+            return false;
+        size_t digit = text[i] - '0';
+        if (value > (std::numeric_limits<size_t>::max() - digit) / 10)
+            return false;
+        value = value * 10 + digit;
+    }
+    return value > 0;
+}
+
+void Mode::apply(Channel &room, ClientId actor, const ClientIdentity &identity, const ModeStep &step)
+{
+    Parameters fields(1, room.displayName());
+    // Check again after each accepted step: -o can demote the caller.
+    if (!room.isOperator(actor))
+    {
+        numeric(actor, identity, 482, fields, "You're not channel operator");
+        return;
+    }
+    fields.push_back(std::string(step.adding ? "+" : "-") + step.flag);
+    ChannelModes &m = room.modes;
+    if (step.flag == 'i')
+        m.inviteOnly = step.adding;
+    else if (step.flag == 't')
+        m.topicRestricted = step.adding;
+    else if (step.flag == 'k')
+    {
+        if (step.adding && (step.argument.empty() || step.argument[0] == ':' ||
+            step.argument.find_first_of(" ,\r\n\t") != std::string::npos ||
+            step.argument.find(char(0)) != std::string::npos || step.argument.size() > 128))
+        {
+            numeric(actor, identity, 696, fields, "Invalid channel key");
+            return;
+        }
+        m.key = step.adding ? step.argument : "";
+        m.hasKey = step.adding;
+        // Other members see that a key exists; only operators receive the key.
+        if (step.adding)
+            fields.push_back(step.argument);
+    }
+    else if (step.flag == 'l')
+    {
+        size_t limit = 0;
+        if (step.adding && !parseLimit(step.argument, limit))
+        {
+            numeric(actor, identity, 696, fields, "Invalid channel limit");
+            return;
+        }
+        m.limit = limit;
+        m.hasLimit = step.adding;
+        if (step.adding)
+            fields.push_back(step.argument);
+    }
+    else if (step.flag == 'o')
+    {
+        ClientId target;
+        ClientIdentity user;
+        if (!context.identities.clientIdForNickname(step.argument, target) ||
+            !context.identities.identityOf(target, user))
+        {
+            numeric(actor, identity, 401, Parameters(1, step.argument), "No such nick");
+            return;
+        }
+        if (!room.containsMember(target))
+        {
+            Parameters missing(1, user.nickname);
+            missing.push_back(room.displayName());
+            numeric(actor, identity, 441, missing, "They aren't on that channel");
+            return;
+        }
+        if (step.adding)
+            room.grantOperator(target);
+        else
+            room.revokeOperator(target);
+        fields.push_back(user.nickname);
+    }
+    std::string event;
+    // MODE uses middle parameters only. Drop the builder's empty trailing field.
+    if (buildEventLine(identity, "MODE", fields, "", event) != ReplySuccess)
+        return;
+    event.erase(event.size() - 2);
+    std::string masked;
+    if (step.flag == 'k' && step.adding)
+        masked = event.substr(0, event.size() - step.argument.size()) + "*";
+    for (Channel::ClientIds::const_iterator it = room.members.begin(); it != room.members.end(); ++it)
+        context.output.enqueueLine(*it, !masked.empty() && !room.isOperator(*it) ? masked : event);
+}
+
 void Mode::execute(ClientId actor, const ClientIdentity &identity, const Parameters &params)
 {
     Channel *channel = memberChannel(actor, identity, params[0]);
@@ -77,6 +172,11 @@ void Mode::execute(ClientId actor, const ClientIdentity &identity, const Paramet
         return;
     }
 
+    if (!channel->isOperator(actor))
+    {
+        numeric(actor, identity, 482, Parameters(1, channel->displayName()), "You're not channel operator");
+        return;
+    }
     std::vector<ModeStep> plan = planModeChanges(params);
     for (size_t i = 0; i < plan.size(); ++i)
     {
@@ -84,6 +184,8 @@ void Mode::execute(ClientId actor, const ClientIdentity &identity, const Paramet
             numeric(actor, identity, 472, Parameters(1, std::string(1, plan[i].flag)), "Unknown mode flag");
         else if (plan[i].error == 461)
             numeric(actor, identity, 461, Parameters(1, "MODE"), "Not enough parameters");
+        else
+            apply(*channel, actor, identity, plan[i]);
     }
 }
 }

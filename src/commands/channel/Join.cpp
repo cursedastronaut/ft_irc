@@ -14,11 +14,16 @@ void Join::execute(ClientId actor, const ClientIdentity &identity, const Paramet
     }
     if (channel->containsMember(actor))
         return;
-    if (channel->modes.inviteOnly || channel->modes.hasKey || channel->modes.hasLimit)
+    int denied = 0;
+    if (channel->modes.inviteOnly && !channel->hasInvitation(actor))
+        denied = 473;
+    else if (channel->modes.hasKey && (params.size() < 2 || params[1] != channel->modes.key))
+        denied = 475;
+    else if (channel->modes.hasLimit && channel->members.size() >= channel->modes.limit)
+        denied = 471;
+    if (denied)
     {
-        // Restricted admission is implemented with the respective MODE tasks.
-        int code = channel->modes.inviteOnly ? 473 : (channel->modes.hasKey ? 475 : 471);
-        numeric(actor, identity, code, Parameters(1, channel->displayName()), "Channel admission restricted");
+        numeric(actor, identity, denied, Parameters(1, channel->displayName()), "Channel admission refused");
         return;
     }
     try
@@ -36,6 +41,7 @@ void Join::execute(ClientId actor, const ClientIdentity &identity, const Paramet
         throw;
     }
 
+    channel->consumeInvitation(actor);
     std::string event;
     if (buildEventLine(identity, "JOIN", Parameters(), channel->displayName(), event) == ReplySuccess)
         broadcast(*channel, event);

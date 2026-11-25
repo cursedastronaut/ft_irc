@@ -18,6 +18,7 @@ class Mode : public ChannelCommand
 public:
     explicit Mode(ChannelContext &ctx) : ChannelCommand(ctx, "MODE", 1) {}
 private:
+    void apply(Channel &room, ClientId actor, const ClientIdentity &identity, const ModeStep &step);
     void execute(ClientId actor, const ClientIdentity &identity, const Parameters &params);
 };
 }
