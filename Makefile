@@ -31,7 +31,9 @@ FILES		= main.cpp\
 			protocol/DispatchProtocol.cpp\
 			protocol/Guards.cpp\
 			commands/auth/PassHandler.cpp\
-			commands/auth/NickHandler.cpp
+			commands/auth/NickHandler.cpp\
+			commands/auth/UserHandler.cpp\
+			commands/auth/Welcome.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))
