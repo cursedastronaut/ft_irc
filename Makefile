@@ -13,7 +13,7 @@ TEST_CHA_MEM	= chan_mem_test
 TEST_MEMORY		= all_mem_tests
 
 CXX			= c++
-CXXFLAGS	= -O3 -Wall -Wextra -Werror -Iinclude -std=c++98 -MMD -MP
+CXXFLAGS	= -O3 -Wall -Wextra -Werror -Iinclude -Isrc -std=c++98 -MMD -MP
 RM			= rm -rf
 
 OBJ_DIR		= obj/
@@ -31,7 +31,18 @@ FILES		= main.cpp\
 			protocol/DispatchProtocol.cpp\
 			protocol/Guards.cpp\
 			commands/auth/PassHandler.cpp\
-			commands/auth/NickHandler.cpp
+			commands/auth/NickHandler.cpp\
+			commands/auth/UserHandler.cpp\
+			channels/Channel.cpp\
+			channels/ChannelName.cpp\
+			channels/ChannelRegistry.cpp\
+			commands/channel/ChannelCommand.cpp\
+			commands/channel/Join.cpp\
+			commands/channel/Mode.cpp\
+			commands/channel/Part.cpp\
+			commands/channel/Topic.cpp\
+			commands/channel/Kick.cpp\
+			commands/channel/Invite.cpp
 
 SRCS		= $(addprefix $(SRC_DIR), $(FILES))
 OBJS		= $(addprefix $(OBJ_DIR), $(FILES:.cpp=.o))
