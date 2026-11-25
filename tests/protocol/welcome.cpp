@@ -45,10 +45,12 @@ void sendWelcomeEnqueuesTheExactWireFormat()
 
 	irc::sendWelcome(1, registry, net);
 
-	CHECK(net.lines.size() == 1);
+	CHECK(net.lines.size() == 2);
 	CHECK(net.ids[0] == 1);
 	CHECK(net.lines[0] == ":ircserv 001 bob :Welcome to the Internet Relay "
 						   "Network bob!bob@ircserv");
+	CHECK(net.ids[1] == 1);
+	CHECK(net.lines[1] == ":ircserv 422 bob :MOTD File is missing");
 }
 
 void sendWelcomeOnAnUnknownClientDoesNothing()

@@ -32,5 +32,12 @@ namespace irc
 		std::string line;
 		if (buildNumericReply(1, registry.recipientFor(id), noParams, text, line) == ReplySuccess)
 			net.enqueueLine(id, line);
+
+		// RPL_ENDOFMOTD substitute (no MOTD file): lets irssi leave the
+		// connecting state and run its queued commands (PROTO-33 note).
+		std::string end;
+		if (buildNumericReply(422, registry.recipientFor(id), noParams,
+				"MOTD File is missing", end) == ReplySuccess)
+			net.enqueueLine(id, end);
 	}
 }
