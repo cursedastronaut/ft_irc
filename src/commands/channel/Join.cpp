@@ -1,4 +1,5 @@
 #include "commands/channel/Join.hpp"
+#include "commands/channel/Names.hpp"
 
 namespace irc
 {
@@ -41,5 +42,6 @@ void Join::execute(ClientId actor, const ClientIdentity &identity, const Paramet
     bool empty = channel->topic.empty();
     numeric(actor, identity, empty ? 331 : 332, Parameters(1, channel->displayName()),
             empty ? "No topic is set" : channel->topic);
+    sendNames(context, actor, identity, *channel);
 }
 }

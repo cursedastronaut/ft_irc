@@ -38,6 +38,8 @@ FILES		= main.cpp\
 			channels/ChannelName.cpp\
 			channels/ChannelRegistry.cpp\
 			commands/channel/ChannelCommand.cpp\
+			commands/channel/Who.cpp\
+			commands/channel/Names.cpp\
 			commands/channel/Join.cpp\
 			commands/channel/Mode.cpp\
 			commands/channel/Part.cpp\

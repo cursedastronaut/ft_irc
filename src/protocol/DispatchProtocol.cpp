@@ -49,6 +49,14 @@ namespace irc
                     _transport.enqueueLine(id, ":ircserv CAP * LS :");
                 return;
             }
+            if (out.command == "PING")
+            {
+                if (out.params.empty() || out.params[0].empty())
+                    sendNumeric(id, 461, recipient, "PING", "Not enough parameters");
+                else
+                    _transport.enqueueLine(id, ":ircserv PONG ircserv :" + out.params[0]);
+                return;
+            }
             if ((!known || !record.registered) && !isPreRegistrationCommand(out.command))
 				return; //next issue send error to client
 			
