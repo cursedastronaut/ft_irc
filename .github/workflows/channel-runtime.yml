@@ -1,0 +1,12 @@
+name: Channel server integration
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  socket:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -j2
+      - run: python3 tests/runtime/registration.py
