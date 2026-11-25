@@ -1,28 +1,53 @@
-#include "commands/auth/UserHandler.hpp"
-#include "protocol/Reply.hpp"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   UserHandler.cpp                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/11/24 14:09:17 by nehuen            #+#    #+#             */
+/*   Updated: 2026/11/25 15:52:04 by nehuen           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
-void irc::UserHandler::handle(ClientId id, const std::vector<std::string> &p)
+#include "commands/auth/UserHandler.hpp"
+#include "protocol/Dispatcher.hpp"
+#include "protocol/Reply.hpp"
+#include "commands/auth/Welcome.hpp"
+
+namespace irc
 {
-    ClientRecord record;
-    if (!registry_.find(id, record))
-        return;
-    int code = 461;
-    std::vector<std::string> fields(1, "USER");
-    std::string text = "Invalid USER parameters";
-    if (record.userSet || record.registered)
-    {
-        code = 462;
-        fields.clear();
-        text = "You may not reregister";
-    }
-    else if (p.size() == 4 && !p[0].empty() && !p[1].empty() && !p[2].empty() && !p[3].empty()
-             && p[0].find_first_of(" !@:\r\n\t") == std::string::npos
-             && p[0].find(char(0)) == std::string::npos && p[0].size() <= 64)
-    {
-        registry_.setUser(id, p[0], p[3]);
-        return;
-    }
-    std::string line;
-    if (buildNumericReply(code, registry_.recipientFor(id), fields, text, line) == ReplySuccess)
-        net_.enqueueLine(id, line);
+	UserHandler::UserHandler(ClientRegistry &registry,
+		 transport &net) : _registry(registry), _transport(net)
+	{		
+	}
+
+	void	UserHandler::handle(ClientId id, const std::vector<std::string> &params)
+	{
+		ClientRecord							record;
+		std::vector<std::string>	noParams;
+		std::string								line;
+		
+		if (!_registry.find(id, record))
+			return ;
+		if (record.registered)
+		{
+			if (buildNumericReply(462, _registry.recipientFor(id), noParams,
+					"Unauthorized command (already registered)", line) == ReplySuccess)
+				_transport.enqueueLine(id, line);
+			return ;
+		}
+		if (params[0].empty() || params[1].empty() || params[2].empty() || params[3].empty()
+			|| params[0].find_first_of(" !@:\r\n\t") != std::string::npos
+			|| params[0].find('\0') != std::string::npos
+			|| params[0].size() > 64)
+		{
+			if (buildNumericReply(461, _registry.recipientFor(id), std::vector<std::string>(1, "USER"),
+					"Invalid USER parameters", line) == ReplySuccess)
+				_transport.enqueueLine(id, line);
+			return ;
+		}
+		if (_registry.setUser(id, params[0], params[3]))
+			sendWelcome(id, _registry, _transport);
+	}
 }

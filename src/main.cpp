@@ -3,7 +3,6 @@
 #include "protocol/DispatchProtocol.hpp"
 #include "commands/auth/PassHandler.hpp"
 #include "commands/auth/NickHandler.hpp"
-
 #include "commands/auth/UserHandler.hpp"
 #include "commands/channel/Join.hpp"
 #include "commands/channel/Mode.hpp"
@@ -63,9 +62,9 @@ int	main(int ac, char **av) {
 		dispatcher.registerHandler("PASS", &passHandler, 1);
 		irc::NickHandler nickHandler(registry, serv);
 		dispatcher.registerHandler("NICK", &nickHandler, 0);
+		irc::UserHandler userHandler(registry, serv);
+		dispatcher.registerHandler("USER", &userHandler, 4);
 
-        irc::UserHandler user(registry, serv);
-        dispatcher.registerHandler("USER", &user, 4);
         irc::Join join(channelContext);
         dispatcher.registerHandler("JOIN", &join);
         irc::Mode mode(channelContext);
