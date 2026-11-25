@@ -12,3 +12,7 @@ jobs:
       - run: python3 tests/runtime/registration.py
       - run: python3 tests/runtime/channel_modes.py
       - run: python3 tests/runtime/permissions.py
+      - name: Install the reference client
+        run: sudo apt-get -o Acquire::Retries=2 update && sudo apt-get -y install irssi python3-pexpect
+      - name: Verify MODE and NAMES through irssi
+        run: /usr/bin/python3 tests/runtime/irssi_modes.py
