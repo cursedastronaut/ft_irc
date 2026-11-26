@@ -57,6 +57,8 @@ namespace irc
                     _transport.enqueueLine(id, ":ircserv PONG ircserv :" + out.params[0]);
                 return;
             }
+            if (out.command == "PONG")
+                return; // PROTO-26: accepted, no-op, no reply loop
             if ((!known || !record.registered) && !isPreRegistrationCommand(out.command))
 				return; //next issue send error to client
 			

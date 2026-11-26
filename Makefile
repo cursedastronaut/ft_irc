@@ -35,6 +35,7 @@ FILES		= main.cpp\
 			commands/auth/UserHandler.cpp\
 			commands/auth/Welcome.cpp\
 			commands/auth/PrivmsgRouter.cpp\
+			commands/auth/QuitHandler.cpp\
 			channels/Channel.cpp\
 			channels/ChannelName.cpp\
 			channels/ChannelRegistry.cpp\

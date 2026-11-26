@@ -54,13 +54,13 @@ namespace irc
 		
 		for (unsigned long end = line.find(' ', i); end != std::string::npos; end = line.find(' ', i))
 		{
+			if (line[i] == ':')
+				break ;
 			out.params.push_back(line.substr(i, end - i));
 			i = end + 1;
 			skipSpace(line, &i);
 			if (out.params.size() == 15)
 				return ParseError;
-			if (line[i] == ':')
-				break ;
 		}
 		if (line[i] == ':') //trailing param, go until EOF
 			i++;
