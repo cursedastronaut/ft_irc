@@ -4,6 +4,7 @@
 #include "commands/auth/PassHandler.hpp"
 #include "commands/auth/NickHandler.hpp"
 #include "commands/auth/UserHandler.hpp"
+#include "commands/auth/PrivmsgRouter.hpp"
 #include "commands/channel/Join.hpp"
 #include "commands/channel/Names.hpp"
 #include "commands/channel/Who.hpp"
@@ -83,7 +84,8 @@ int	main(int ac, char **av) {
         irc::Kick kick(channelContext);
         dispatcher.registerHandler("KICK", &kick);
         irc::ChannelMessage channelMessage(channelContext);
-        dispatcher.registerHandler("PRIVMSG", &channelMessage);
+        irc::PrivmsgRouter privmsgRouter(registry, serv, channelMessage);
+        dispatcher.registerHandler("PRIVMSG", &privmsgRouter);
         irc::Invite invite(channelContext);
         dispatcher.registerHandler("INVITE", &invite);
 
