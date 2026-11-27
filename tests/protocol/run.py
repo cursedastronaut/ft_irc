@@ -27,6 +27,8 @@ SUITES = {
 				"src/commands/auth/Welcome.cpp"],
 	"privmsg_router": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
 						"src/commands/auth/PrivmsgRouter.cpp"],
+	"quit_handler": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
+					  "src/commands/auth/QuitHandler.cpp"],
 	"registration_flow": ["src/protocol/ClientRegistry.cpp", "src/protocol/Reply.cpp",
 						   "src/commands/auth/PassHandler.cpp",
 						   "src/commands/auth/NickHandler.cpp",

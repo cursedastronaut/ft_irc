@@ -5,6 +5,7 @@
 #include "commands/auth/NickHandler.hpp"
 #include "commands/auth/UserHandler.hpp"
 #include "commands/auth/PrivmsgRouter.hpp"
+#include "commands/auth/QuitHandler.hpp"
 #include "commands/channel/Join.hpp"
 #include "commands/channel/Names.hpp"
 #include "commands/channel/Who.hpp"
@@ -35,6 +36,17 @@ public:
 private:
     irc::ServerConfig &server_;
     irc::ChannelRegistry &channels_;
+};
+
+class ChannelServiceAdapter : public irc::ChannelService
+{
+public:
+    explicit ChannelServiceAdapter(irc::ChannelRegistry &registry) : registry_(registry) {}
+    void handle(irc::ClientId, const irc::ParsedCommand &) {}
+    void removeClient(irc::ClientId actorId) { registry_.removeClient(actorId); }
+    std::vector<irc::ClientId> peersOf(irc::ClientId actorId) const { return registry_.peersOf(actorId); }
+private:
+    irc::ChannelRegistry &registry_;
 };
 }
 
@@ -88,6 +100,9 @@ int	main(int ac, char **av) {
         dispatcher.registerHandler("PRIVMSG", &privmsgRouter);
         irc::Invite invite(channelContext);
         dispatcher.registerHandler("INVITE", &invite);
+        ChannelServiceAdapter channelService(channels);
+        irc::QuitHandler quitHandler(registry, serv, channelService);
+        dispatcher.registerHandler("QUIT", &quitHandler);
 
 		serv.initListener(INADDR_ANY, LISTEN_BACKLOG);
 		std::cout << serv << std::endl;
