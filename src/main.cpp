@@ -73,10 +73,10 @@ int	main(int ac, char **av) {
         ServerProtocol protocol(dispatcher, registry, serv, channels);
         irc::ChannelContext channelContext(channels, registry, serv);
 
-
+		ChannelServiceAdapter channelService(channels);
 		irc::PassHandler passHandler(registry, serv, serv);
 		dispatcher.registerHandler("PASS", &passHandler, 1);
-		irc::NickHandler nickHandler(registry, serv);
+		irc::NickHandler nickHandler(registry, serv, channelService);
 		dispatcher.registerHandler("NICK", &nickHandler, 0);
 		irc::UserHandler userHandler(registry, serv);
 		dispatcher.registerHandler("USER", &userHandler, 4);
@@ -100,7 +100,7 @@ int	main(int ac, char **av) {
         dispatcher.registerHandler("PRIVMSG", &privmsgRouter);
         irc::Invite invite(channelContext);
         dispatcher.registerHandler("INVITE", &invite);
-        ChannelServiceAdapter channelService(channels);
+       
         irc::QuitHandler quitHandler(registry, serv, channelService);
         dispatcher.registerHandler("QUIT", &quitHandler);
 
