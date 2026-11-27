@@ -257,6 +257,117 @@ void aHandledCommandSendsNoDispatcherError()
 	CHECK(net.lines.empty());
 }
 
+void capLsRepliesWithAnEmptyCapabilityList()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "CAP LS");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv CAP * LS :");
+}
+
+void capLsWithAVersionArgumentRepliesTheSameWay()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "CAP LS 302");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv CAP * LS :");
+}
+
+void capReqForAnUnsupportedCapabilityIsNeverAcknowledged()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "CAP REQ :sasl");
+
+	CHECK(net.lines.empty());
+}
+
+void capEndProducesNoReply()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "CAP END");
+
+	CHECK(net.lines.empty());
+}
+
+void bareCapBeforeRegistrationIsSilentlyDropped()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "CAP");
+
+	CHECK(net.lines.empty());
+}
+
+void bareCapAfterRegistrationIsAnUnknownCommand()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setNickname(1, "bob");
+	registry.setRegistered(1);
+	protocol.online(1, "CAP");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv 421 bob CAP :Unknown command");
+}
+
+void pingWithoutAParameterReplies461()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "PING");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv 461 * PING :Not enough parameters");
+}
+
+void pingWithAParameterRepliesWithTheExactEcho()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "PING foo");
+
+	CHECK(net.lines.size() == 1U);
+	CHECK(net.lines[0] == ":ircserv PONG ircserv :foo");
+}
+
 }
 
 int main()
@@ -289,6 +400,22 @@ int main()
 						  missingParametersReplyWithoutReachingTheHandler);
 	failures += runTests("aHandledCommandSendsNoDispatcherError",
 						  aHandledCommandSendsNoDispatcherError);
+	failures += runTests("capLsRepliesWithAnEmptyCapabilityList",
+						  capLsRepliesWithAnEmptyCapabilityList);
+	failures += runTests("capLsWithAVersionArgumentRepliesTheSameWay",
+						  capLsWithAVersionArgumentRepliesTheSameWay);
+	failures += runTests("capReqForAnUnsupportedCapabilityIsNeverAcknowledged",
+						  capReqForAnUnsupportedCapabilityIsNeverAcknowledged);
+	failures += runTests("capEndProducesNoReply",
+						  capEndProducesNoReply);
+	failures += runTests("bareCapBeforeRegistrationIsSilentlyDropped",
+						  bareCapBeforeRegistrationIsSilentlyDropped);
+	failures += runTests("bareCapAfterRegistrationIsAnUnknownCommand",
+						  bareCapAfterRegistrationIsAnUnknownCommand);
+	failures += runTests("pingWithoutAParameterReplies461",
+						  pingWithoutAParameterReplies461);
+	failures += runTests("pingWithAParameterRepliesWithTheExactEcho",
+						  pingWithAParameterRepliesWithTheExactEcho);
 
 	return failures;
 }
