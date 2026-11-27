@@ -368,6 +368,97 @@ void pingWithAParameterRepliesWithTheExactEcho()
 	CHECK(net.lines[0] == ":ircserv PONG ircserv :foo");
 }
 
+// PROTO-36: registration state matrix. Each "failed/incomplete case" test
+// drives ClientRegistry directly to the exact partial state (rather than
+// going through PassHandler/NickHandler/UserHandler, already covered in
+// client_registry.cpp and registration_flow.cpp) and checks the one thing
+// those files cannot: that DispatchProtocol's own gate really blocks a
+// regular command for that client, end to end.
+
+void aClientMissingAllThreePrerequisitesCannotReachARegularHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler privmsg;
+	dispatcher.registerHandler("PRIVMSG", &privmsg);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	protocol.online(1, "PRIVMSG bob :hi");
+
+	CHECK(privmsg.callCount == 0);
+}
+
+void aClientWithOnlyPasswordAcceptedCannotReachARegularHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler privmsg;
+	dispatcher.registerHandler("PRIVMSG", &privmsg);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setPasswordAccepted(1, true);
+	protocol.online(1, "PRIVMSG bob :hi");
+
+	CHECK(privmsg.callCount == 0);
+}
+
+void aClientOneStepAwayFromCompleteRegistrationStillCannotReachARegularHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler privmsg;
+	dispatcher.registerHandler("PRIVMSG", &privmsg);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setNickname(1, "bob");
+	protocol.online(1, "PRIVMSG bob :hi");
+
+	CHECK(privmsg.callCount == 0);
+}
+
+void aClientWhosePasswordWasRejectedAfterTheOtherTwoStepsStillCannotReachARegularHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler privmsg;
+	dispatcher.registerHandler("PRIVMSG", &privmsg);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+	registry.setPasswordAccepted(1, false);
+	protocol.online(1, "PRIVMSG bob :hi");
+
+	CHECK(privmsg.callCount == 0);
+}
+
+void aFullyRegisteredClientCanReachARegularHandler()
+{
+	irc::Dispatcher dispatcher;
+	irc::ClientRegistry registry;
+	StubHandler privmsg;
+	dispatcher.registerHandler("PRIVMSG", &privmsg);
+	RecordingTransport net;
+	irc::DispatchProtocol protocol(dispatcher, registry, net);
+
+	protocol.connected(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setNickname(1, "bob");
+	registry.setUser(1, "bob", "Bob Real");
+	protocol.online(1, "PRIVMSG bob :hi");
+
+	CHECK(privmsg.callCount == 1);
+}
+
 }
 
 int main()
@@ -416,6 +507,18 @@ int main()
 						  pingWithoutAParameterReplies461);
 	failures += runTests("pingWithAParameterRepliesWithTheExactEcho",
 						  pingWithAParameterRepliesWithTheExactEcho);
+	failures += runTests("aClientMissingAllThreePrerequisitesCannotReachARegularHandler",
+						  aClientMissingAllThreePrerequisitesCannotReachARegularHandler);
+	failures += runTests("aClientWithOnlyPasswordAcceptedCannotReachARegularHandler",
+						  aClientWithOnlyPasswordAcceptedCannotReachARegularHandler);
+	failures += runTests(
+		"aClientOneStepAwayFromCompleteRegistrationStillCannotReachARegularHandler",
+		aClientOneStepAwayFromCompleteRegistrationStillCannotReachARegularHandler);
+	failures += runTests(
+		"aClientWhosePasswordWasRejectedAfterTheOtherTwoStepsStillCannotReachARegularHandler",
+		aClientWhosePasswordWasRejectedAfterTheOtherTwoStepsStillCannotReachARegularHandler);
+	failures += runTests("aFullyRegisteredClientCanReachARegularHandler",
+						  aFullyRegisteredClientCanReachARegularHandler);
 
 	return failures;
 }

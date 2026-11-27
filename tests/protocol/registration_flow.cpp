@@ -168,6 +168,29 @@ void renamingAfterRegistrationDoesNotResendTheWelcome()
 	CHECK(countWelcomeLines(net) == 1);
 }
 
+// PROTO-36: "repeated completion calls" — resending the full PASS/NICK/USER
+// triple again after registration already completed must not send a second
+// welcome, even when every value resent is identical to the first time.
+void resendingTheFullRegistrationTripleAfterCompletionStillSendsExactlyOneWelcome()
+{
+	irc::ClientRegistry registry;
+	FakePasswordSource source("secret");
+	RecordingTransport net;
+	irc::PassHandler passHandler(registry, source, net);
+	irc::NickHandler nickHandler(registry, net);
+	irc::UserHandler userHandler(registry, net);
+
+	registry.create(1);
+	passHandler.handle(1, one("secret"));
+	nickHandler.handle(1, one("bob"));
+	userHandler.handle(1, userParams("bob", "Bob Real"));
+	passHandler.handle(1, one("secret"));
+	nickHandler.handle(1, one("bob"));
+	userHandler.handle(1, userParams("bob", "Bob Real"));
+
+	CHECK(countWelcomeLines(net) == 1);
+}
+
 }
 
 int main()
@@ -186,6 +209,9 @@ int main()
 		retryingAFailedPasswordWithTheCorrectOneStillCompletesRegistrationOnce);
 	failures += runTests("renamingAfterRegistrationDoesNotResendTheWelcome",
 						  renamingAfterRegistrationDoesNotResendTheWelcome);
+	failures += runTests(
+		"resendingTheFullRegistrationTripleAfterCompletionStillSendsExactlyOneWelcome",
+		resendingTheFullRegistrationTripleAfterCompletionStillSendsExactlyOneWelcome);
 
 	return failures;
 }
