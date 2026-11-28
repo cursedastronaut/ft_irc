@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   NickHandler.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nd-angel <nd-angel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/23 18:13:12 by nd-angel          #+#    #+#             */
-/*   Updated: 2026/11/23 21:18:13 by nd-angel         ###   ########.fr       */
+/*   Updated: 2026/11/27 22:51:38 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,8 @@ namespace irc
 	class NickHandler : public CommandHandler
 	{
 		public:
-			NickHandler(ClientRegistry &registry, transport &net);
+			NickHandler(ClientRegistry &registry, transport &net, 
+				ChannelService &channels);
 
 			void	handle(ClientId actor, const std::vector<std::string> &params);
 
@@ -35,8 +36,9 @@ namespace irc
 						const std::vector<std::string> &params,
 						const std::string &text);
 
-			ClientRegistry	&_registry;
-			transport		&_transport;
+			ClientRegistry		&_registry;
+			transport					&_transport;
+			ChannelService		&_channels;
 	};
 }
 

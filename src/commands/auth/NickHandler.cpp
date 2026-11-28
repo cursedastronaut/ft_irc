@@ -6,7 +6,7 @@
 /*   By: nehuen <nehuen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/23 18:16:20 by nd-angel          #+#    #+#             */
-/*   Updated: 2026/11/25 15:51:04 by nehuen           ###   ########.fr       */
+/*   Updated: 2026/11/27 23:53:20 by nehuen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,9 +41,11 @@ namespace irc
 		return true;
 	}
 
-	NickHandler::NickHandler(ClientRegistry &registry, transport &net)
-		: _registry(registry), _transport(net) {
-	}
+	NickHandler::NickHandler(ClientRegistry &registry, transport &net,
+		ChannelService &channels)
+		: _registry(registry), _transport(net), _channels(channels) {
+		}
+	
 
 	void	NickHandler::reply(ClientId actor, int numeric,
 				const std::vector<std::string> &params, const std::string &text)
@@ -60,7 +62,8 @@ namespace irc
 		ClientRecord							record;
 		ClientId									owner;
 		std::vector<std::string>	nickParam;
-
+		
+		
 		if (!_registry.find(actor, record))
 			return ;
 		if (params.empty() || params[0].empty())
@@ -70,7 +73,24 @@ namespace irc
 			return reply(actor, 432, nickParam, "Erroneous nickname");
 		if (_registry.clientIdForNickname(params[0], owner) && owner != actor)
 			return reply(actor, 433, nickParam, "Nickname is already in use");
+
+		ClientIdentity oldIdentity;
+		bool wasRegistered = _registry.identityOf(actor, oldIdentity);
+
 		if (_registry.setNickname(actor, params[0]))
 			sendWelcome(actor, _registry, _transport);
+
+		if (wasRegistered)
+		{
+			std::vector<std::string> empty;
+			std::string line;
+			if (buildEventLine(oldIdentity, "NICK", empty, params[0], line) == ReplySuccess)
+			{
+				std::vector<ClientId> peers = _channels.peersOf(actor);
+				for (std::vector<ClientId>::const_iterator it = peers.begin();
+					it != peers.end(); ++it)
+					_transport.enqueueLine(*it, line);
+			}
+		}
 	}
 }

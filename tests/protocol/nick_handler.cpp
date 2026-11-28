@@ -33,12 +33,36 @@ class RecordingTransport : public transport
 		std::vector<std::string> lines;
 };
 
+class FakeChannelService : public irc::ChannelService
+{
+	public:
+		void handle(irc::ClientId, const irc::ParsedCommand &) {}
+		void removeClient(irc::ClientId) {}
+
+		std::vector<irc::ClientId> peersOf(irc::ClientId actorId) const
+		{
+			(void)actorId;
+			return configuredPeers;
+		}
+
+		std::vector<irc::ClientId> configuredPeers;
+};
+
 std::vector<std::string> one(const std::string &value)
 {
 	std::vector<std::string> params;
 
 	params.push_back(value);
 	return params;
+}
+
+void registerClient(irc::ClientRegistry &registry, irc::ClientId id,
+					 const std::string &nickname, const std::string &username)
+{
+	registry.create(id);
+	registry.setNickname(id, nickname);
+	registry.setUser(id, username, "Real Name");
+	registry.setPasswordAccepted(id, true);
 }
 
 // ---- PROTO-17: validator -------------------------------------------------
@@ -85,7 +109,8 @@ void bareNickReplies431()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	std::vector<std::string> none;
 	irc::ClientRecord out;
 
@@ -102,7 +127,8 @@ void emptyNickReplies431()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 
 	registry.create(1);
 	handler.handle(1, one(""));
@@ -115,7 +141,8 @@ void invalidNickReplies432AndKeepsCurrentNick()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 	irc::ClientId owner = 0;
 
@@ -136,7 +163,8 @@ void caseVariantCollisionReplies433AndLeavesBothIntact()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 	irc::ClientId owner = 0;
 
@@ -159,7 +187,8 @@ void collisionBeforeFirstNickUsesStar()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 
 	registry.create(1);
@@ -176,7 +205,8 @@ void ownCaseChangeIsNotACollision()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 	irc::ClientId owner = 0;
 
@@ -195,7 +225,8 @@ void renameFreesTheOldNickname()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 	irc::ClientId owner = 0;
 
@@ -217,7 +248,8 @@ void removeFreesTheNickname()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientId owner = 0;
 
 	registry.create(1);
@@ -231,7 +263,8 @@ void unknownActorIsIgnored()
 {
 	irc::ClientRegistry registry;
 	RecordingTransport net;
-	irc::NickHandler handler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
 	irc::ClientRecord out;
 	irc::ClientId owner = 0;
 
@@ -240,6 +273,96 @@ void unknownActorIsIgnored()
 	CHECK(net.lines.empty());
 	CHECK(registry.find(999, out) == false);
 	CHECK(registry.clientIdForNickname("ghost", owner) == false);
+}
+
+// ---- PROTO-24: broadcast NICK once to each affected peer -----------------
+
+void renameOfARegisteredClientNotifiesEachPeerExactlyOnceWithTheNickLine()
+{
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
+
+	registerClient(registry, 1, "alice", "al");
+	channels.configuredPeers.push_back(2);
+	channels.configuredPeers.push_back(3);
+
+	handler.handle(1, one("newalice"));
+
+	CHECK(net.lines.size() == 2);
+	CHECK(net.ids[0] == 2);
+	CHECK(net.ids[1] == 3);
+	CHECK(net.lines[0] == ":alice!al@ircserv NICK :newalice");
+	CHECK(net.lines[1] == ":alice!al@ircserv NICK :newalice");
+}
+
+void renameOfARegisteredClientWithNoPeersSendsNoEventLineButStillRenames()
+{
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
+	irc::ClientRecord out;
+
+	registerClient(registry, 1, "alice", "al");
+
+	handler.handle(1, one("newalice"));
+
+	CHECK(net.lines.empty());
+	CHECK(registry.find(1, out) && out.nickname == "newalice");
+}
+
+void firstNickDuringRegistrationNeverBroadcastsEvenWithPeersConfigured()
+{
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
+
+	registry.create(1);
+	// Not registered yet (no password/user): peersOf would never really
+	// return anything for a client that has not joined any channel, but
+	// this configures it anyway to prove the guard itself, not the
+	// incidental behaviour of ChannelRegistry.
+	channels.configuredPeers.push_back(2);
+
+	handler.handle(1, one("bob"));
+
+	CHECK(net.lines.empty());
+}
+
+void renameAfterRegistrationCompletesBroadcastsExactlyOnceNotTwice()
+{
+	irc::ClientRegistry registry;
+	RecordingTransport net;
+	FakeChannelService channels;
+	irc::NickHandler handler(registry, net, channels);
+	irc::ClientRecord out;
+
+	registry.create(1);
+	registry.setPasswordAccepted(1, true);
+	registry.setUser(1, "al", "Real Name");
+	channels.configuredPeers.push_back(2);
+
+	// This NICK call is the one that completes registration (rising edge):
+	// it must send the welcome, but must NOT broadcast a NICK event (the
+	// client had no "old" identity to announce yet).
+	handler.handle(1, one("alice"));
+
+	CHECK(net.lines.size() == 2);
+	CHECK(net.lines[0] == ":ircserv 001 alice :Welcome to the Internet Relay "
+						   "Network alice!al@ircserv");
+	CHECK(net.lines[1] == ":ircserv 422 alice :MOTD File is missing");
+	CHECK(registry.find(1, out) && out.registered == true);
+
+	// A second, later rename of the now-registered client does broadcast,
+	// and does not resend the welcome.
+	handler.handle(1, one("newalice"));
+
+	CHECK(net.lines.size() == 3);
+	CHECK(net.ids[2] == 2);
+	CHECK(net.lines[2] == ":alice!al@ircserv NICK :newalice");
 }
 
 }
@@ -268,6 +391,18 @@ int main()
 	failures += runTests("renameFreesTheOldNickname", renameFreesTheOldNickname);
 	failures += runTests("removeFreesTheNickname", removeFreesTheNickname);
 	failures += runTests("unknownActorIsIgnored", unknownActorIsIgnored);
+	failures += runTests(
+		"renameOfARegisteredClientNotifiesEachPeerExactlyOnceWithTheNickLine",
+		renameOfARegisteredClientNotifiesEachPeerExactlyOnceWithTheNickLine);
+	failures += runTests(
+		"renameOfARegisteredClientWithNoPeersSendsNoEventLineButStillRenames",
+		renameOfARegisteredClientWithNoPeersSendsNoEventLineButStillRenames);
+	failures += runTests(
+		"firstNickDuringRegistrationNeverBroadcastsEvenWithPeersConfigured",
+		firstNickDuringRegistrationNeverBroadcastsEvenWithPeersConfigured);
+	failures += runTests(
+		"renameAfterRegistrationCompletesBroadcastsExactlyOnceNotTwice",
+		renameAfterRegistrationCompletesBroadcastsExactlyOnceNotTwice);
 
 	return failures;
 }

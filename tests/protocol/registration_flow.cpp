@@ -45,6 +45,19 @@ class RecordingTransport : public transport
 		std::vector<std::string> lines;
 };
 
+class FakeChannelService : public irc::ChannelService
+{
+	public:
+		void handle(irc::ClientId, const irc::ParsedCommand &) {}
+		void removeClient(irc::ClientId) {}
+
+		std::vector<irc::ClientId> peersOf(irc::ClientId actorId) const
+		{
+			(void)actorId;
+			return std::vector<irc::ClientId>();
+		}
+};
+
 std::vector<std::string> one(const std::string &value)
 {
 	std::vector<std::string> params;
@@ -87,7 +100,8 @@ void completingPassNickUserInThatOrderSendsExactlyOneWelcome()
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
@@ -104,7 +118,8 @@ void completingTheSameThreeInAReversedOrderAlsoSendsExactlyOneWelcome()
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
@@ -121,7 +136,8 @@ void aFailedPasswordAfterTheOtherTwoPrerequisitesSendsNoWelcome()
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
@@ -138,7 +154,8 @@ void retryingAFailedPasswordWithTheCorrectOneStillCompletesRegistrationOnce()
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
@@ -156,7 +173,8 @@ void renamingAfterRegistrationDoesNotResendTheWelcome()
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
@@ -177,7 +195,8 @@ void resendingTheFullRegistrationTripleAfterCompletionStillSendsExactlyOneWelcom
 	FakePasswordSource source("secret");
 	RecordingTransport net;
 	irc::PassHandler passHandler(registry, source, net);
-	irc::NickHandler nickHandler(registry, net);
+	FakeChannelService channels;
+	irc::NickHandler nickHandler(registry, net, channels);
 	irc::UserHandler userHandler(registry, net);
 
 	registry.create(1);
