@@ -83,6 +83,47 @@ void repeatedRemovalIsSafe()
 	CHECK(found == false);
 }
 
+// ---- PROTO-39: release nickname reservations during disconnect ----------
+
+void aFreshClientCanClaimAFormerlyDisconnectedClientsNickname()
+{
+	irc::ClientRegistry registry;
+	irc::ClientId owner = 0;
+
+	registry.create(1);
+	registry.setNickname(1, "bob");
+	registry.remove(1);
+
+	CHECK(registry.clientIdForNickname("bob", owner) == false);
+
+	registry.create(2);
+	CHECK(registry.setNickname(2, "bob") == false); // not yet fully registered
+	CHECK(registry.clientIdForNickname("bob", owner) && owner == 2);
+}
+
+void aStaleDuplicateRemovalForAnOldIdNeverTouchesTheNewOwnersReservation()
+{
+	irc::ClientRegistry registry;
+	irc::ClientRecord out;
+	irc::ClientId owner = 0;
+
+	registry.create(1);
+	registry.setNickname(1, "bob");
+	registry.remove(1); // simulates the disconnect cleanup
+
+	registry.create(2);
+	registry.setNickname(2, "bob"); // a fresh client claims the freed nickname
+
+	// A stale/duplicate deferred cleanup event for the old id arriving late
+	// must not find anything belonging to id 2 to damage: remove() always
+	// re-reads the record it is about to erase by its own ClientId, never
+	// by nickname, so a second call for id 1 is a no-op.
+	registry.remove(1);
+
+	CHECK(registry.find(2, out) && out.nickname == "bob");
+	CHECK(registry.clientIdForNickname("bob", owner) && owner == 2);
+}
+
 void removingAClientThatNeverExistedIsSafe()
 {
 	irc::ClientRegistry registry;
@@ -439,6 +480,12 @@ int main()
 	failures += runTests("repeatedRemovalIsSafe", repeatedRemovalIsSafe);
 	failures += runTests("removingAClientThatNeverExistedIsSafe",
 						  removingAClientThatNeverExistedIsSafe);
+	failures += runTests(
+		"aFreshClientCanClaimAFormerlyDisconnectedClientsNickname",
+		aFreshClientCanClaimAFormerlyDisconnectedClientsNickname);
+	failures += runTests(
+		"aStaleDuplicateRemovalForAnOldIdNeverTouchesTheNewOwnersReservation",
+		aStaleDuplicateRemovalForAnOldIdNeverTouchesTheNewOwnersReservation);
 	failures += runTests("newlyCreatedRecordCannotRegister",
 						  newlyCreatedRecordCannotRegister);
 	failures += runTests("canRegisterIsFalseWhenAllFlagsAreFalse",
