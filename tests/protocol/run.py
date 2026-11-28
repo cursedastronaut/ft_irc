@@ -41,6 +41,13 @@ SUITES = {
 						   "src/protocol/DispatchProtocol.cpp",
 						   "src/protocol/ClientRegistry.cpp", "src/protocol/Guards.cpp",
 						   "src/protocol/Reply.cpp"],
+	"malformed_input_matrix": ["src/protocol/Parser.cpp", "src/protocol/Dispatcher.cpp",
+						   "src/protocol/DispatchProtocol.cpp",
+						   "src/protocol/ClientRegistry.cpp", "src/protocol/Guards.cpp",
+						   "src/protocol/Reply.cpp", "src/commands/auth/PassHandler.cpp",
+						   "src/commands/auth/NickHandler.cpp",
+						   "src/commands/auth/UserHandler.cpp",
+						   "src/commands/auth/Welcome.cpp"],
 }
 
 
